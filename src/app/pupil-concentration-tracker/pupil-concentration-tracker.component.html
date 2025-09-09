@@ -14,36 +14,43 @@
             [value]="concentrationLevel" 
             [color]="concentrationLevel > 70 ? 'primary' : concentrationLevel > 40 ? 'accent' : 'warn'">
           </mat-progress-bar>
-          <div class="concentration-value">{{ concentrationLevel }}%</div>
+          <div class="concentration-value">{{ concentrationLevel | number : '1.2-2' }}%</div>
         </div>
         
         <div class="stats-container">
           <h3>Live Metrics</h3>
           <ul>
-            <li>Concentration Level: {{ concentrationLevel }}%</li>
-            <li>Left Pupil Size: {{ leftPupilSize }} mm</li>
-            <li>Right Pupil Size: {{ rightPupilSize }} mm</li>
+            <li>Left Pupil Size: {{ leftPupilSize | number:'1.2-2'}} mm</li>
+            <li>Right Pupil Size: {{ rightPupilSize | number:'1.2-2'}} mm</li>
           </ul>
         </div>
 
         <mat-card-actions>
-          <button mat-raised-button color="primary" (click)="startTracking()" *ngIf="!isTracking">
+          @if(isTracking==false){
+          <button mat-raised-button color="primary" (click)="startTracking()" >
             Start Tracking
           </button>
-          <button mat-raised-button color="warn" (click)="stopTracking()" *ngIf="isTracking">
-            Stop Tracking
-          </button>
+          }
+          
+          @if(isTracking==true){
+            <button mat-raised-button color="warn" (click)="stopTracking()" >
+              Stop Tracking
+            </button>
+          }
+          
           </mat-card-actions>
       </div>
       
       <div class="camera-column">
         <div class="video-container">
+         
           <video #video width="640" height="480" autoplay playsinline muted [hidden]="!isTracking"></video>
           <canvas #canvas width="640" height="480" [hidden]="!isTracking"></canvas>
-          <div class="placeholder-video" *ngIf="!isTracking">
-            <mat-icon>videocam</mat-icon>
-            <p>Camera feed will appear here when tracking is active</p>
-          </div>
+          @if(isTracking==false){
+            <div class="placeholder-video">
+              <p>Camera feed will appear here when tracking is active</p>
+            </div>
+          }
         </div>
       </div>
       

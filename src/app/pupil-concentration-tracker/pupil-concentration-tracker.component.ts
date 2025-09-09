@@ -44,8 +44,8 @@ export class PupilConcentrationTrackerComponent implements OnInit, OnDestroy {
 
 
   settings = {
-    sensitivity: 1.0,
-    smoothing: 5,
+    sensitivity: 2,
+    smoothing: 3,
     threshold: 100
   };
   
