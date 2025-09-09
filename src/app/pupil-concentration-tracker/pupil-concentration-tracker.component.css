@@ -42,6 +42,14 @@
 
 .stats-container {
   margin: 20px 0;
+  background-color: #f5f5f5;
+  border-radius: 4px;
+  padding: 15px;
+}
+
+.stats-container h3 {
+  margin-top: 0;
+  color: #3f51b5;
 }
 
 .stats-container ul {
@@ -50,8 +58,15 @@
 }
 
 .stats-container li {
-  padding: 8px 0;
-  border-bottom: 1px solid #eee;
+  padding: 10px 0;
+  border-bottom: 1px solid #ddd;
+  font-size: 16px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.stats-container li:last-child {
+  border-bottom: none;
 }
 
 mat-card-actions {

@@ -19,15 +19,35 @@ import { MatIconModule } from '@angular/material/icon';
   styleUrls: ['./pupil-concentration-tracker.component.css']
 })
 export class PupilConcentrationTrackerComponent {
-  concentrationLevel: number = 0; // Example value
+  concentrationLevel: number = 75; // Example value
+  leftPupilSize: number = 4.2; // Example value in mm
+  rightPupilSize: number = 4.5; // Example value in mm
   isTracking: boolean = false;
   
   startTracking(): void {
     this.isTracking = true;
-    // Here would be the actual tracking logic using TensorFlow.js
+    // Simulate tracking with TensorFlow.js
+    const updateInterval = setInterval(() => {
+      if (!this.isTracking) {
+        clearInterval(updateInterval);
+        return;
+      }
+      
+      // Simulate pupil size changes (would be replaced with actual TensorFlow.js detection)
+      this.leftPupilSize = Math.round((3.5 + Math.random() * 1.5) * 10) / 10;
+      this.rightPupilSize = Math.round((3.5 + Math.random() * 1.5) * 10) / 10;
+      
+      // Calculate concentration based on pupil sizes (simplified example)
+      const avgPupilSize = (this.leftPupilSize + this.rightPupilSize) / 2;
+      this.concentrationLevel = Math.round(Math.min(100, Math.max(0, 100 - (avgPupilSize - 4) * 50)));
+    }, 1000);
   }
   
   stopTracking(): void {
     this.isTracking = false;
+    // Reset values when tracking is stopped
+    this.concentrationLevel = 75;
+    this.leftPupilSize = 4.2;
+    this.rightPupilSize = 4.5;
   }
 }
