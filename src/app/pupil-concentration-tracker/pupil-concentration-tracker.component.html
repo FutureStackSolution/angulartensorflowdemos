@@ -36,6 +36,10 @@
             <button mat-raised-button color="warn" (click)="stopTracking()" >
               Stop Tracking
             </button>
+            <span>&nbsp;</span>
+            <button mat-stroked-button color="accent" (click)="recalibrate()" [disabled]="!isCalibrated" title="Recalibrate baseline pupil size">
+              Recalibrate
+            </button>
           }
           
           </mat-card-actions>
