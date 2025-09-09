@@ -10,7 +10,5 @@ import { NavigationComponent } from './navigation/navigation.component';
 })
 export class App {
   protected readonly title = signal('Angular Tensorflow demos');
- 
-
   
 }
