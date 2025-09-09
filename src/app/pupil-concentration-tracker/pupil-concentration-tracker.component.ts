@@ -24,6 +24,7 @@ import * as faceLandmarksDetection from '@tensorflow-models/face-landmarks-detec
   styleUrls: ['./pupil-concentration-tracker.component.css']
 })
 export class PupilConcentrationTrackerComponent implements OnInit, OnDestroy {
+
   @ViewChild('video') videoElement!: ElementRef<HTMLVideoElement>;
   @ViewChild('canvas') canvasElement!: ElementRef<HTMLCanvasElement>;
   
@@ -37,7 +38,6 @@ export class PupilConcentrationTrackerComponent implements OnInit, OnDestroy {
   private detector: faceLandmarksDetection.FaceLandmarksDetector | null = null;
   private stream: MediaStream | null = null;
   private animationId: number = 0;
-  private calibrationData: number[] = [];
   private baselinePupilSize = 0;
   private pupilSizeHistory: number[] = [];
 
@@ -58,6 +58,13 @@ export class PupilConcentrationTrackerComponent implements OnInit, OnDestroy {
     this.stopTracking();
   }
 
+  /**
+   * Load the face detection model. This method is called once when the component is initialized.
+   * It waits for TensorFlow to be ready, and then loads the MediaPipe Face Mesh model with
+   * the refineLandmarks option enabled. If the model is loaded successfully, it logs a success
+   * message to the console. If there is an error, it logs the error message to the console.
+   * @returns {Promise<void>}
+   */
   async loadModel() {
     try {
       console.log('Loading face detection model...');
@@ -78,7 +85,13 @@ export class PupilConcentrationTrackerComponent implements OnInit, OnDestroy {
     }
   }
 
-
+  /**
+   * Start tracking the user's face and pupil movements using the user's
+   * webcam. This function is called when the user clicks the "Start
+   * Tracking" button.
+   * @returns {Promise<void>}
+   */
+  
   async startTracking() {
     try {
       this.stream = await navigator.mediaDevices.getUserMedia({
@@ -99,6 +112,12 @@ export class PupilConcentrationTrackerComponent implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * Start face detection and process the results. This function is called
+   * recursively using requestAnimationFrame to continuously detect faces
+   * and update the metrics.
+   * @returns {Promise<void>}
+   */
   async startDetection() {
     if (!this.detector || !this.startTracking) return;
 
@@ -131,6 +150,13 @@ export class PupilConcentrationTrackerComponent implements OnInit, OnDestroy {
     this.animationId = requestAnimationFrame(() => this.startDetection());
   }
 
+  /**
+   * Process the face detection result, drawing the face box and calculating the
+   * pupil sizes. If the pupil sizes are both valid, draw the eye indicators and
+   * update the concentration level. If not, decay the concentration level.
+   * @param ctx The canvas 2D drawing context.
+   * @param face The face detection result.
+   */
   processFaceDetection(ctx: CanvasRenderingContext2D, face: any) {
     if (!face.keypoints) return;
 
@@ -160,6 +186,12 @@ export class PupilConcentrationTrackerComponent implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * Extract the keypoints for a given eye region from a list of detected keypoints.
+   * @param keypoints The list of keypoints to extract from.
+   * @param eye The eye to extract keypoints for (either 'left' or 'right').
+   * @returns An array of keypoints for the specified eye, or null if the extraction fails.
+   */
   extractEyeRegion(keypoints: any[], eye: 'left' | 'right'): any[] | null {
     try {
       const leftEyeIndices = [33, 7, 163, 144, 145, 153, 154, 155, 133, 173, 157, 158, 159, 160, 161, 246];
@@ -174,6 +206,17 @@ export class PupilConcentrationTrackerComponent implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * Determine if an eye is open or closed by looking at the aspect ratio of the eye.
+   * This is done by comparing the vertical distance between the upper and lower eyelids
+   * to the horizontal distance between the left and right eye corners.
+   * If the aspect ratio is greater than a certain threshold (empirically set to 0.1),
+   * we assume the eye is open.
+   * If the eye corners are missing, or if the horizontal distance is zero (which would
+   * cause a division by zero error), we return false.
+   * @param keypoints The list of keypoints for the face.
+   * @param side The side of the face to check (either 'left' or 'right').
+   */
   isEyeOpen(keypoints: any[], side: 'left' | 'right'): boolean {
     if (!keypoints || keypoints.length < 478) return false;
 
@@ -201,6 +244,19 @@ export class PupilConcentrationTrackerComponent implements OnInit, OnDestroy {
     // This threshold is empirical. A value around 0.1 is common for closed eyes.
     return eyeAspectRatio > 0.1;
   }
+
+  
+  /**
+   * Calculate the pupil size (diameter) in mm from the keypoints of one eye.
+   * The calculation uses the iris points (474, 476, 477, 475 for left eye and 469, 471, 472, 470 for right eye)
+   * and the horizontal distance between the eye corners (33, 133 for left eye and 362, 263 for right eye) as a reference.
+   * The pupil size is estimated by averaging the vertical and horizontal distances of the iris points.
+   * The result is then converted from pixels to mm using the reference eye width.
+   * The result is clamped to a reasonable range of 1.5 to 9.0 mm to avoid noise.
+   * @param keypoints The keypoints of the face mesh.
+   * @param side The side of the face (left or right).
+   * @returns The estimated pupil size in mm.
+   */
   calculatePupilSize(keypoints: any[], side: 'left' | 'right'): number {
     // The MediaPipeFaceMesh model with `refineLandmarks: true` returns 478 keypoints.
     // The iris landmarks are only available with this setting.
@@ -250,6 +306,17 @@ export class PupilConcentrationTrackerComponent implements OnInit, OnDestroy {
     return Math.max(1.5, Math.min(9.0, diameterInMm));
   }
 
+  /**
+   * Updates the concentration level based on the latest pupil sizes.
+   * It will automatically calibrate the baseline pupil size after 30 frames of valid data.
+   * The concentration level is a score from 0-100 based on pupil dilation and stability.
+   * The score is calculated as follows:
+   * 1. Dilation score (0-60 points): Maps the dilation ratio to a score, with a ratio of 1.0
+   *    giving a medium score and a ratio of ~1.15 giving a high score.
+   * 2. Stability score (0-40 points): Maps the pupil size variability to a score, with a
+   *    variability of 0 giving a high score and a variability of 1 giving a low score.
+   * 3. Combine scores and clamp to 0-100.
+   */
   updateConcentration() {
     const averagePupilSize = (this.leftPupilSize + this.rightPupilSize) / 2;
     if (averagePupilSize <= 0) {
@@ -300,6 +367,15 @@ export class PupilConcentrationTrackerComponent implements OnInit, OnDestroy {
       // The UI will show the initial value of 0.
     }
   }
+  
+  /**
+   * Calculates the pupil size variability over the last 10 samples.
+   * If there are fewer than 10 samples, returns 0.
+   * The variability is the square root of the variance of the pupil sizes,
+   * divided by the mean pupil size.
+   * The result is clamped to be no larger than 1.
+   * @return The pupil size variability, between 0 and 1.
+   */
   calculatePupilVariability(): number {
     if (this.pupilSizeHistory.length < 10) return 0;
     const recent = this.pupilSizeHistory.slice(-10);
@@ -308,11 +384,24 @@ export class PupilConcentrationTrackerComponent implements OnInit, OnDestroy {
     return Math.min(1, Math.sqrt(variance) / mean);
   }
 
+  /**
+   * Smooths a value over time, by blending it with a new value.
+   * The smoothing factor is between 0 and 1, where 0 means only the new value is used,
+   * and 1 means the current value is kept unchanged.
+   * @param currentValue The current value to be smoothed.
+   * @param newValue The new value to be blended in.
+   * @return The smoothed value.
+   */
   smoothValue(currentValue: number, newValue: number): number {
     const smoothingFactor = this.settings.smoothing / 10;
     return currentValue * smoothingFactor + newValue * (1 - smoothingFactor);
   }
 
+  /**
+   * Draws a green box around the detected face, to help illustrate the tracking.
+   * @param ctx The canvas context to draw on.
+   * @param face The face object from the face detection model, containing the box coordinates.
+   */
   drawFaceBox(ctx: CanvasRenderingContext2D, face: any) {
     if (!face.box) return;
     const { xMin, yMin, width, height } = face.box;
@@ -321,6 +410,14 @@ export class PupilConcentrationTrackerComponent implements OnInit, OnDestroy {
     ctx.strokeRect(xMin, yMin, width, height);
   }
 
+  /**
+   * Draws a small circle at the center of each detected eye, to help illustrate which
+   * points are being used to calculate the pupil size. Red for the left eye, green for
+   * the right eye.
+   * @param ctx The canvas context to draw on.
+   * @param leftEye An array of points representing the left eye, if detected.
+   * @param rightEye An array of points representing the right eye, if detected.
+   */
   drawEyeIndicators(ctx: CanvasRenderingContext2D, leftEye: any[], rightEye: any[]) {
     ctx.fillStyle = '#ff6b6b';
     if (leftEye.length > 0) {
@@ -336,6 +433,13 @@ export class PupilConcentrationTrackerComponent implements OnInit, OnDestroy {
       ctx.fill();
     }
   }
+
+  
+  /**
+   * Resets the current pupil sizes and concentration level to zero.
+   * This is called when the face detection is lost, or when the user
+   * manually stops tracking.
+   */
   resetCurrentMetrics() {
     this.leftPupilSize = 0;
     this.rightPupilSize = 0;
@@ -343,6 +447,13 @@ export class PupilConcentrationTrackerComponent implements OnInit, OnDestroy {
     this.concentrationLevel = this.smoothValue(this.concentrationLevel, 0);
   }
 
+  /**
+   * Resets the baseline pupil size to the current average pupil size, 
+   * and resets the concentration level to zero. This is useful if the user
+   * wants to reset the baseline pupil size to the current state of their
+   * eyes, or if the concentration level has become desensitized over time.
+   * Has no effect if the tracker is not currently active.
+   */
   recalibrate() {
     if (!this.isTracking) return;
     console.log('Recalibrating...');
@@ -352,10 +463,11 @@ export class PupilConcentrationTrackerComponent implements OnInit, OnDestroy {
     this.concentrationLevel = 0; // Reset concentration during recalibration
   }
 
-
-
-
-
+  /**
+   * Stops the eye tracker and resets all metrics and state.
+   * Called automatically when the user stops the tracker, or
+   * when the component is destroyed.
+   */
   stopTracking() {
     if (this.stream) {
       this.stream.getTracks().forEach(track => track.stop());
