@@ -3,44 +3,51 @@
     <mat-card-header>
       <mat-card-title>Pupil Concentration Tracker</mat-card-title>
       <mat-card-subtitle>Monitor student focus levels in real-time</mat-card-subtitle>
+      <mat-card-subtitle>Please concentrate on the webcam</mat-card-subtitle>
     </mat-card-header>
     
-    <mat-card-content>
-      <div class="concentration-meter">
-        <h3>Current Concentration Level</h3>
-        <mat-progress-bar 
-          [value]="concentrationLevel" 
-          [color]="concentrationLevel > 70 ? 'primary' : concentrationLevel > 40 ? 'accent' : 'warn'">
-        </mat-progress-bar>
-        <div class="concentration-value">{{ concentrationLevel }}%</div>
+    <mat-card-content class="two-column-layout">
+      <div class="metrics-column">
+        <div class="concentration-meter">
+          <h3>Current Concentration Level</h3>
+          <mat-progress-bar 
+            [value]="concentrationLevel" 
+            [color]="concentrationLevel > 70 ? 'primary' : concentrationLevel > 40 ? 'accent' : 'warn'">
+          </mat-progress-bar>
+          <div class="concentration-value">{{ concentrationLevel }}%</div>
+        </div>
+        
+        <div class="stats-container">
+          <h3>Live Metrics</h3>
+          <ul>
+            <li>Concentration Level: {{ concentrationLevel }}%</li>
+            <li>Left Pupil Size: {{ leftPupilSize }} mm</li>
+            <li>Right Pupil Size: {{ rightPupilSize }} mm</li>
+          </ul>
+        </div>
+
+        <mat-card-actions>
+          <button mat-raised-button color="primary" (click)="startTracking()" *ngIf="!isTracking">
+            Start Tracking
+          </button>
+          <button mat-raised-button color="warn" (click)="stopTracking()" *ngIf="isTracking">
+            Stop Tracking
+          </button>
+          </mat-card-actions>
       </div>
       
-      <div class="video-container">
-        <video #video width="640" height="480" autoplay playsinline muted [hidden]="!isTracking"></video>
-        <canvas #canvas width="640" height="480" [hidden]="!isTracking"></canvas>
-        <div class="placeholder-video" *ngIf="!isTracking">
-          <mat-icon>videocam</mat-icon>
-          <p>Camera feed will appear here when tracking is active</p>
+      <div class="camera-column">
+        <div class="video-container">
+          <video #video width="640" height="480" autoplay playsinline muted [hidden]="!isTracking"></video>
+          <canvas #canvas width="640" height="480" [hidden]="!isTracking"></canvas>
+          <div class="placeholder-video" *ngIf="!isTracking">
+            <mat-icon>videocam</mat-icon>
+            <p>Camera feed will appear here when tracking is active</p>
+          </div>
         </div>
       </div>
       
-      <div class="stats-container">
-        <h3>Live Metrics</h3>
-        <ul>
-          <li>Concentration Level: {{ concentrationLevel }}%</li>
-          <li>Left Pupil Size: {{ leftPupilSize }} mm</li>
-          <li>Right Pupil Size: {{ rightPupilSize }} mm</li>
-        </ul>
-      </div>
+      
     </mat-card-content>
-    
-    <mat-card-actions>
-      <button mat-raised-button color="primary" (click)="startTracking()" *ngIf="!isTracking">
-       Start Tracking
-      </button>
-      <button mat-raised-button color="warn" (click)="stopTracking()" *ngIf="isTracking">
-        Stop Tracking
-      </button>
-    </mat-card-actions>
   </mat-card>
 </div>

@@ -1,6 +1,6 @@
 .container {
   padding: 20px;
-  max-width: 800px;
+  max-width: 1200px;
   margin: 0 auto;
 }
 
@@ -19,9 +19,24 @@
   margin-top: 10px;
 }
 
+.two-column-layout {
+  display: flex;
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.metrics-column {
+  flex: 1;
+  min-width: 300px;
+}
+
+.camera-column {
+  flex: 2;
+}
+
 .video-container {
-  margin: 20px 0;
-  height: 300px;
+  margin: 0;
+  height: 480px;
   border: 1px solid #ccc;
   border-radius: 4px;
   display: flex;
@@ -81,4 +96,7 @@
 mat-card-actions {
   display: flex;
   justify-content: center;
+  margin-top: 20px;
+  padding: 0;
+  border-top: 1px solid #eee;
 }

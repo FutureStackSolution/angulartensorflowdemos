@@ -146,8 +146,6 @@ export class PupilConcentrationTrackerComponent implements OnInit, OnDestroy {
 
       this.drawEyeIndicators(ctx, leftEye, rightEye);
       this.updateConcentration();
-
-      
     }
   }
 
