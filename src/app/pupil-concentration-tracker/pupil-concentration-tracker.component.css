@@ -1,0 +1,60 @@
+.container {
+  padding: 20px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.tracker-card {
+  margin-bottom: 20px;
+}
+
+.concentration-meter {
+  margin: 20px 0;
+}
+
+.concentration-value {
+  font-size: 24px;
+  font-weight: bold;
+  text-align: center;
+  margin-top: 10px;
+}
+
+.video-container {
+  margin: 20px 0;
+  height: 300px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.placeholder-video {
+  text-align: center;
+  color: #666;
+}
+
+.placeholder-video mat-icon {
+  font-size: 48px;
+  height: 48px;
+  width: 48px;
+}
+
+.stats-container {
+  margin: 20px 0;
+}
+
+.stats-container ul {
+  list-style-type: none;
+  padding-left: 0;
+}
+
+.stats-container li {
+  padding: 8px 0;
+  border-bottom: 1px solid #eee;
+}
+
+mat-card-actions {
+  display: flex;
+  justify-content: center;
+}

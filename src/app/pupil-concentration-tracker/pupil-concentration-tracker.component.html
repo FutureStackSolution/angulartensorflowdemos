@@ -1,0 +1,45 @@
+<div class="container">
+  <mat-card class="tracker-card">
+    <mat-card-header>
+      <mat-card-title>Pupil Concentration Tracker</mat-card-title>
+      <mat-card-subtitle>Monitor student focus levels in real-time</mat-card-subtitle>
+    </mat-card-header>
+    
+    <mat-card-content>
+      <div class="concentration-meter">
+        <h3>Current Concentration Level</h3>
+        <mat-progress-bar 
+          [value]="concentrationLevel" 
+          [color]="concentrationLevel > 70 ? 'primary' : concentrationLevel > 40 ? 'accent' : 'warn'">
+        </mat-progress-bar>
+        <div class="concentration-value">{{ concentrationLevel }}%</div>
+      </div>
+      
+      <div class="video-container">
+        <!-- Video feed would be displayed here -->
+        <div class="placeholder-video">
+          <mat-icon>videocam</mat-icon>
+          <p>Camera feed will appear here when tracking is active</p>
+        </div>
+      </div>
+      
+      <div class="stats-container">
+        <h3>Statistics</h3>
+        <ul>
+          <li>Average concentration: 68%</li>
+          <li>Peak concentration: 92%</li>
+          <li>Time spent focused: 24 minutes</li>
+        </ul>
+      </div>
+    </mat-card-content>
+    
+    <mat-card-actions>
+      <button mat-raised-button color="primary" (click)="startTracking()" *ngIf="!isTracking">
+        <mat-icon>play_arrow</mat-icon> Start Tracking
+      </button>
+      <button mat-raised-button color="warn" (click)="stopTracking()" *ngIf="isTracking">
+        <mat-icon>stop</mat-icon> Stop Tracking
+      </button>
+    </mat-card-actions>
+  </mat-card>
+</div>

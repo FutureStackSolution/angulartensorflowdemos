@@ -1,8 +1,7 @@
 import { Routes } from '@angular/router';
-import { TensorflowDemoComponent } from './tensorflow-demo/tensorflow-demo.component';
+import { PupilConcentrationTrackerComponent } from './pupil-concentration-tracker/pupil-concentration-tracker.component';
 
 export const routes: Routes = [
-  { path: '', redirectTo: 'home', pathMatch: 'full' },
-  { path: 'home', component: TensorflowDemoComponent },
-  { path: 'tensorflow-demo', component: TensorflowDemoComponent }
+  { path: 'eye-tracker', component: PupilConcentrationTrackerComponent },
+  { path: '', redirectTo: '/home', pathMatch: 'full' }
 ];
