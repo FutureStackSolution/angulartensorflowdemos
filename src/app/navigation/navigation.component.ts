@@ -4,6 +4,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatListModule } from '@angular/material/list';
+import { RouterModule } from '@angular/router';
 
 @Component({
   selector: 'app-navigation',
@@ -13,7 +14,8 @@ import { MatListModule } from '@angular/material/list';
     MatButtonModule,
     MatIconModule,
     MatSidenavModule,
-    MatListModule
+    MatListModule,
+    RouterModule
   ],
   templateUrl: './navigation.component.html',
   styleUrls: ['./navigation.component.css']

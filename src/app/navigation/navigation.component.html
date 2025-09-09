@@ -1,5 +1,10 @@
 <mat-toolbar color="primary">
   <span>Angular TensorFlow Demos</span>
- 
+  <span class="spacer"></span>
+  <a mat-button routerLink="/home" routerLinkActive="active">Home</a>
+  <a mat-button routerLink="/tensorflow-demo" routerLinkActive="active">TensorFlow Demo</a>
 </mat-toolbar>
 
+<div class="content">
+  <ng-content></ng-content>
+</div>
