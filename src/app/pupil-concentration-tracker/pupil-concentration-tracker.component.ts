@@ -246,16 +246,14 @@ export class PupilConcentrationTrackerComponent implements OnInit, OnDestroy {
   }
 
   
+  
   /**
-   * Calculate the pupil size (diameter) in mm from the keypoints of one eye.
-   * The calculation uses the iris points (474, 476, 477, 475 for left eye and 469, 471, 472, 470 for right eye)
-   * and the horizontal distance between the eye corners (33, 133 for left eye and 362, 263 for right eye) as a reference.
-   * The pupil size is estimated by averaging the vertical and horizontal distances of the iris points.
-   * The result is then converted from pixels to mm using the reference eye width.
-   * The result is clamped to a reasonable range of 1.5 to 9.0 mm to avoid noise.
-   * @param keypoints The keypoints of the face mesh.
-   * @param side The side of the face (left or right).
-   * @returns The estimated pupil size in mm.
+   * Calculates the pupil size (diameter in pixels) for a given eye by using the
+   * iris landmarks from the MediaPipeFaceMesh model. The landmarks are only available
+   * when the model is loaded with the `refineLandmarks: true` option.
+   * @param keypoints The keypoints detected by the model.
+   * @param side The side of the face to calculate the pupil size for (either 'left' or 'right').
+   * @returns The pupil diameter in pixels, or 0 if not all iris points are detected.
    */
   calculatePupilSize(keypoints: any[], side: 'left' | 'right'): number {
     // The MediaPipeFaceMesh model with `refineLandmarks: true` returns 478 keypoints.
