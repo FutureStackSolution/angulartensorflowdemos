@@ -279,31 +279,7 @@ export class PupilConcentrationTrackerComponent implements OnInit, OnDestroy {
     const horizontalDist = Math.hypot(left.x - right.x, left.y - right.y);
 
     // Average of vertical and horizontal distances as pupil diameter in pixels
-    const diameterInPixels = (verticalDist + horizontalDist) / 2;
-
-    // To get a measurement in mm, we need a reference object with a known real-world size.
-    // The horizontal distance between the eye corners is a good candidate.
-    // The average human eye horizontal visible diameter is about 28-30mm.
-    const eyeCornerIndices = side === 'left' ? { p1: 33, p2: 133 } : { p1: 362, p2: 263 };
-    const p1 = keypoints[eyeCornerIndices.p1];
-    const p2 = keypoints[eyeCornerIndices.p2];
-
-    if (!p1 || !p2) {
-        return 0;
-    }
-
-    const eyeWidthPixels = Math.hypot(p1.x - p2.x, p1.y - p2.y);
-    
-    if (eyeWidthPixels === 0) return 0;
-
-    // This is an estimation. A more robust solution would involve a proper calibration step.
-    const PIXELS_PER_MM_ESTIMATE = eyeWidthPixels / 28.0; // Assuming horizontal eye width is ~28mm
-
-    const diameterInMm = diameterInPixels / PIXELS_PER_MM_ESTIMATE;
-
-    // A normal pupil size is between 2mm to 8mm.
-    // Let's clamp it to a reasonable range to avoid noise.
-    return Math.max(1.5, Math.min(9.0, diameterInMm));
+    return (verticalDist + horizontalDist) / 2;
   }
 
   /**
@@ -344,18 +320,27 @@ export class PupilConcentrationTrackerComponent implements OnInit, OnDestroy {
       // We'll calculate a score from 0-100 based on pupil dilation and stability.
       // Dilation can indicate cognitive load, and stability can indicate focus.
 
-      // 1. Dilation Score (0-60 points)
-      // We assume peak concentration happens with a slight pupil dilation (e.g., 10-20% larger).
-      // We'll map the dilation ratio to a score. A ratio of 1.0 (same as baseline) gives a
-      // medium score, while a ratio of ~1.15 gives a high score.
-      const clampedDilation = Math.max(0.9, Math.min(1.2, dilationRatio)); // Clamp to a reasonable range
-      const normalizedDilation = (clampedDilation - 0.9) / (1.2 - 0.9); // Normalize to 0-1
-      const dilationScore = normalizedDilation * 60;
+      // 1. Dilation Score (0-80 points)
+      // We assume peak concentration happens with a slight pupil dilation (e.g., 10-25% larger).
+      // A dilation ratio around 1.0 is neutral. Ratios below indicate less focus, above indicate more.
+      // We'll use a non-linear mapping to better represent this.
+      let dilationScore = 0;
+      if (dilationRatio >= 1.0) {
+        // Score increases as dilation goes from 1.0 up to a max of around 1.25
+        // A ratio of 1.0 (no change) is now considered moderately focused.
+        const effect = Math.min(1, (dilationRatio - 1.0) / 0.30); // Normalize effect range 1.0 -> 1.30
+        dilationScore = 50 + effect * 30; // Base score of 50, up to 80
+      } else {
+        // Score decreases as dilation goes from 1.0 down to 0.8
+        // A constricted pupil suggests lower concentration.
+        const effect = (1.0 - Math.max(0.75, dilationRatio)) / 0.25; // Normalize effect range 1.0 -> 0.75
+        dilationScore = 50 - effect * 50; // Decrease from base score of 50
+      }
 
-      // 2. Stability Score (0-40 points)
+      // 2. Stability Score (0-20 points)
       // Less variability (more stable pupil size) indicates higher focus.
       // A variability of 0 is perfect stability, and 1 is max instability.
-      const stabilityScore = (1 - Math.min(1, variability * this.settings.sensitivity)) * 40;
+      const stabilityScore = (1 - Math.min(1, variability * this.settings.sensitivity)) * 20;
 
       // 3. Combine scores and clamp
       let concentrationScore = dilationScore + stabilityScore;
