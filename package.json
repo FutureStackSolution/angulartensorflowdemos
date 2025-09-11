@@ -31,6 +31,8 @@
     "@angular/material": "^20.2.2",
     "@angular/platform-browser": "^20.2.0",
     "@angular/router": "^20.2.0",
+    "@tensorflow-models/coco-ssd": "^2.2.3",
+    "@tensorflow-models/face-landmarks-detection": "^1.0.6",
     "@tensorflow/tfjs": "^4.22.0",
     "rxjs": "~7.8.0",
     "tslib": "^2.3.0",
