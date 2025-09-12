@@ -1,10 +1,164 @@
-<div>
-  @if(!isTracking){
-  <button mat-raised-button color="primary" (click)="startTracking()">Start Tracking</button>
-  }
-  @if(isTracking){
-  <button mat-raised-button color="warn" (click)="stopTracking()">Stop Tracking</button>
-  }
+<div class="container">
+  <mat-card class="detector-card">
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon>visibility</mat-icon>
+        Object Detection
+      </mat-card-title>
+      <mat-card-subtitle>Real-time object detection using TensorFlow.js</mat-card-subtitle>
+    </mat-card-header>
+    
+    <!-- Loading indicator -->
+    <!-- Error message -->
+    @if(errorMessage) {
+      <div class="error-message">
+        <mat-icon>error</mat-icon>
+        <p>{{ errorMessage }}</p>
+      </div>
+    }
+
+    <mat-card-content class="two-column-layout">
+      <div class="metrics-column">
+        <!-- Detection Status -->
+        <div class="detection-status">
+          <h3>
+            <mat-icon>psychology</mat-icon>
+            Detection Status
+          </h3>
+          @if(isTracking) {
+            <div class="status-active">
+              <div class="pulse-dot"></div>
+              <span>Detection Active</span>
+            </div>
+          } @else if(isModelLoaded) {
+            <div class="status-inactive">
+              <mat-icon>pause_circle</mat-icon>
+              <span>Ready to Start</span>
+            </div>
+          } @else {
+            <div class="status-inactive">
+              <mat-icon>download</mat-icon>
+              <span>Model Not Loaded</span>
+            </div>
+          }
+        </div>
+
+        <!-- Detection Statistics -->
+        @if(isTracking) {
+          <div class="stats-container">
+            <h3>
+              <mat-icon>analytics</mat-icon>
+              Live Statistics
+            </h3>
+            <div class="stats-grid">
+              <div class="stat-item">
+                <span class="stat-label">Objects Detected:</span>
+                <span class="stat-value">{{ getCurrentDetectionCount() }}</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Detection Rate:</span>
+                <span class="stat-value">{{ getDetectionRate() }} FPS</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Model Type:</span>
+                <span class="stat-value">{{ getConfig().modelType }}</span>
+              </div>
+            </div>
+          </div>
+        }
+
+        <!-- Configuration Controls -->
+        @if(isModelLoaded) {
+          <div class="config-container">
+            <h3>
+              <mat-icon>settings</mat-icon>
+              Detection Settings
+            </h3>
+            <div class="config-item">
+              <label>Detection Threshold: {{ getConfig().threshold }}</label>
+              <input 
+                type="range" 
+                min="0.1" 
+                max="1.0" 
+                step="0.1" 
+                [value]="getConfig().threshold"
+                (input)="updateThreshold(+$event.target.value)"
+                [disabled]="isTracking"
+                class="slider">
+            </div>
+            <div class="config-item">
+              <label>Max Detections: {{ getConfig().maxDetections }}</label>
+              <input 
+                type="range" 
+                min="1" 
+                max="20" 
+                step="1" 
+                [value]="getConfig().maxDetections"
+                (input)="updateMaxDetections(+$event.target.value)"
+                [disabled]="isTracking"
+                class="slider">
+            </div>
+            <div class="config-item">
+              <label>Frame Rate: {{ getConfig().frameRate }} FPS</label>
+              <input 
+                type="range" 
+                min="15" 
+                max="60" 
+                step="5" 
+                [value]="getConfig().frameRate"
+                (input)="updateFrameRate(+$event.target.value)"
+                [disabled]="isTracking"
+                class="slider">
+            </div>
+          </div>
+        }
+
+        <!-- Control Buttons -->
+        <mat-card-actions>
+          @if(!isTracking) {
+            <button mat-raised-button color="primary" (click)="startTracking()" [disabled]="isLoading">
+              @if(!isLoading) {
+                <mat-icon>play_arrow</mat-icon>
+                <span>Start Detection</span>
+              }
+              @if(isLoading) {
+                <mat-spinner diameter="20"></mat-spinner>
+                <span>Loading Model...</span>
+              }
+            </button>
+          }
+          
+          @if(isTracking) {
+            <button mat-raised-button color="warn" (click)="stopTracking()">
+              <mat-icon>stop</mat-icon>
+              <span>Stop Detection</span>
+            </button>
+          }
+        </mat-card-actions>
+      </div>
+      
+      <div class="camera-column">
+        <div class="video-container">
+          <video #video autoplay playsinline muted width="640" height="480" [hidden]="!isTracking"></video>
+          <canvas #canvas width="640" height="480" [hidden]="!isTracking"></canvas>
+          
+          @if(!isTracking) {
+            <div class="placeholder-video">
+              <mat-icon>videocam_off</mat-icon>
+              <p>Camera feed will appear here when detection is active</p>
+            </div>
+          }
+
+          @if(isTracking) {
+            <div class="detection-overlay">
+              <div class="status-indicator">
+                <div class="pulse-dot"></div>
+                <span>Detecting objects...</span>
+              </div>
+            </div>
+          }
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
 </div>
-<video #video autoplay playsinline muted width="640" height="480"></video>
-<canvas #canvas width="640" height="480"></canvas>
