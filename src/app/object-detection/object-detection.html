@@ -118,20 +118,26 @@
           @if(!isTracking) {
             <button mat-raised-button color="primary" (click)="startTracking()" [disabled]="isLoading">
               @if(!isLoading) {
-                <mat-icon>play_arrow</mat-icon>
-                <span>Start Detection</span>
+                <ng-container>
+                  <mat-icon>play_arrow</mat-icon>
+                  <span>Start Detection</span>
+                </ng-container>
               }
               @if(isLoading) {
-                <mat-spinner diameter="20"></mat-spinner>
-                <span>Loading Model...</span>
+                <ng-container>
+                  <mat-spinner diameter="20"></mat-spinner>
+                  <span>Loading Model...</span>
+                </ng-container>
               }
             </button>
           }
           
           @if(isTracking) {
             <button mat-raised-button color="warn" (click)="stopTracking()">
-              <mat-icon>stop</mat-icon>
-              <span>Stop Detection</span>
+              <ng-container>
+                <mat-icon>stop</mat-icon>
+                <span>Stop Detection</span>
+              </ng-container>
             </button>
           }
         </mat-card-actions>

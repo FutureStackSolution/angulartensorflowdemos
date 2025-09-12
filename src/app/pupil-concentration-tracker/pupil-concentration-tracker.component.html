@@ -139,24 +139,32 @@
           @if(!isTracking) {
             <button mat-raised-button color="primary" (click)="startTracking()" [disabled]="isLoading">
               @if(!isLoading) {
-                <mat-icon>play_arrow</mat-icon>
-                <span>Start Tracking</span>
+                <ng-container>
+                  <mat-icon>play_arrow</mat-icon>
+                  <span>Start Tracking</span>
+                </ng-container>
               }
               @if(isLoading) {
-                <mat-spinner diameter="20"></mat-spinner>
-                <span>Loading Model...</span>
+                <ng-container>
+                  <mat-spinner diameter="20"></mat-spinner>
+                  <span>Loading Model...</span>
+                </ng-container>
               }
             </button>
           }
           
           @if(isTracking) {
             <button mat-raised-button color="warn" (click)="stopTracking()">
-              <mat-icon>stop</mat-icon>
-              <span>Stop Tracking</span>
+              <ng-container>
+                <mat-icon>stop</mat-icon>
+                <span>Stop Tracking</span>
+              </ng-container>
             </button>
             <button mat-stroked-button color="accent" (click)="recalibrate()" [disabled]="!isCalibrated">
-              <mat-icon>refresh</mat-icon>
-              <span>Recalibrate</span>
+              <ng-container>
+                <mat-icon>refresh</mat-icon>
+                <span>Recalibrate</span>
+              </ng-container>
             </button>
           }
         </mat-card-actions>
