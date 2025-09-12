@@ -1,58 +1,191 @@
 <div class="container">
   <mat-card class="tracker-card">
     <mat-card-header>
-      <mat-card-title>Pupil Concentration Tracker</mat-card-title>
-      <mat-card-subtitle>Monitor student focus levels in real-time</mat-card-subtitle>
-      <mat-card-subtitle>Please concentrate on the webcam</mat-card-subtitle>
+      <mat-card-title>
+        <mat-icon>visibility</mat-icon>
+        Pupil Concentration Tracker
+      </mat-card-title>
+      <mat-card-subtitle>Monitor student focus levels in real-time using advanced eye tracking</mat-card-subtitle>
     </mat-card-header>
     
+    <!-- Error message -->
+    @if(errorMessage) {
+      <div class="error-message">
+        <mat-icon>error</mat-icon>
+        <p>{{ errorMessage }}</p>
+      </div>
+    }
+
     <mat-card-content class="two-column-layout">
       <div class="metrics-column">
+        <!-- Concentration Level Display -->
         <div class="concentration-meter">
-          <h3>Current Concentration Level</h3>
+          <h3>
+            <mat-icon>psychology</mat-icon>
+            Current Concentration Level
+          </h3>
           <mat-progress-bar 
             [value]="concentrationLevel" 
             [color]="concentrationLevel > 70 ? 'primary' : concentrationLevel > 40 ? 'accent' : 'warn'">
           </mat-progress-bar>
-          <div class="concentration-value">{{ concentrationLevel | number : '1.2-2' }}%</div>
-        </div>
-        
-        <div class="stats-container">
-          <h3>Live Metrics</h3>
-          <ul>
-            <li>Left Pupil Size: {{ leftPupilSize | number:'1.2-2'}} pixels</li>
-            <li>Right Pupil Size: {{ rightPupilSize | number:'1.2-2'}} pixels</li>
-          </ul>
+          <div class="concentration-value">{{ concentrationLevel | number : '1.0-1' }}%</div>
+          <div class="concentration-status">
+            @if(concentrationLevel > 70) {
+              <span class="status-high">High Focus</span>
+            } @else if(concentrationLevel > 40) {
+              <span class="status-medium">Moderate Focus</span>
+            } @else {
+              <span class="status-low">Low Focus</span>
+            }
+          </div>
         </div>
 
+        <!-- Tracking Status -->
+        <div class="tracking-status">
+          <h3>
+            <mat-icon>visibility</mat-icon>
+            Tracking Status
+          </h3>
+          @if(isTracking) {
+            <div class="status-active">
+              <div class="pulse-dot"></div>
+              <span>Tracking Active</span>
+            </div>
+          } @else if(isModelLoaded) {
+            <div class="status-inactive">
+              <mat-icon>pause_circle</mat-icon>
+              <span>Ready to Start</span>
+            </div>
+          } @else {
+            <div class="status-inactive">
+              <mat-icon>download</mat-icon>
+              <span>Model Not Loaded</span>
+            </div>
+          }
+        </div>
+
+        <!-- Calibration Progress -->
+        @if(isTracking && !isCalibrated) {
+          <div class="calibration-container">
+            <h3>
+              <mat-icon>tune</mat-icon>
+              Calibration Progress
+            </h3>
+            <mat-progress-bar [value]="calibrationProgress" color="accent"></mat-progress-bar>
+            <p>{{ calibrationProgress | number:'1.0-0' }}% - Please look at the camera</p>
+          </div>
+        }
+
+        <!-- Enhanced Metrics -->
+        <div class="stats-container">
+          <h3>
+            <mat-icon>analytics</mat-icon>
+            Live Metrics
+          </h3>
+          <div class="metrics-grid">
+            <div class="metric-item">
+              <span class="metric-label">Left Pupil:</span>
+              <span class="metric-value">{{ metrics.leftPupilSize | number:'1.1-1' }}px</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Right Pupil:</span>
+              <span class="metric-value">{{ metrics.rightPupilSize | number:'1.1-1' }}px</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Dilation Ratio:</span>
+              <span class="metric-value">{{ metrics.dilationRatio | number:'1.2-2' }}x</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label">Stability:</span>
+              <span class="metric-value">{{ (metrics.stability * 100) | number:'1.0-0' }}%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Configuration Controls -->
+        @if(isTracking) {
+          <div class="config-container">
+            <h3>
+              <mat-icon>settings</mat-icon>
+              Settings
+            </h3>
+            <div class="config-item">
+              <label>Sensitivity: {{ getConfig().sensitivity }}</label>
+              <input 
+                type="range" 
+                min="0.5" 
+                max="5" 
+                step="0.1" 
+                [value]="getConfig().sensitivity"
+                (input)="updateSensitivity(+$event.target.value)"
+                class="slider">
+            </div>
+            <div class="config-item">
+              <label>Smoothing: {{ settings.smoothing }}</label>
+              <input 
+                type="range" 
+                min="1" 
+                max="9" 
+                step="1" 
+                [value]="settings.smoothing"
+                (input)="updateSmoothing(+$event.target.value)"
+                class="slider">
+            </div>
+          </div>
+        }
+
+        <!-- Control Buttons -->
         <mat-card-actions>
-          @if(isTracking==false){
-          <button mat-raised-button color="primary" (click)="startTracking()" >
-            Start Tracking
-          </button>
-          }
-          
-          @if(isTracking==true){
-            <button mat-raised-button color="warn" (click)="stopTracking()" >
-              Stop Tracking
-            </button>
-            <span>&nbsp;</span>
-            <button mat-stroked-button color="accent" (click)="recalibrate()" [disabled]="!isCalibrated" title="Recalibrate baseline pupil size">
-              Recalibrate
+          @if(!isTracking) {
+            <button mat-raised-button color="primary" (click)="startTracking()" [disabled]="isLoading">
+              @if(!isLoading) {
+                <mat-icon>play_arrow</mat-icon>
+                <span>Start Tracking</span>
+              }
+              @if(isLoading) {
+                <mat-spinner diameter="20"></mat-spinner>
+                <span>Loading Model...</span>
+              }
             </button>
           }
           
-          </mat-card-actions>
+          @if(isTracking) {
+            <button mat-raised-button color="warn" (click)="stopTracking()">
+              <mat-icon>stop</mat-icon>
+              <span>Stop Tracking</span>
+            </button>
+            <button mat-stroked-button color="accent" (click)="recalibrate()" [disabled]="!isCalibrated">
+              <mat-icon>refresh</mat-icon>
+              <span>Recalibrate</span>
+            </button>
+          }
+        </mat-card-actions>
       </div>
       
       <div class="camera-column">
         <div class="video-container">
-         
           <video #video width="640" height="480" autoplay playsinline muted [hidden]="!isTracking"></video>
           <canvas #canvas width="640" height="480" [hidden]="!isTracking"></canvas>
-          @if(isTracking==false){
+          
+          @if(!isTracking) {
             <div class="placeholder-video">
+              <mat-icon>videocam_off</mat-icon>
               <p>Camera feed will appear here when tracking is active</p>
+            </div>
+          }
+
+          @if(isTracking) {
+            <div class="detection-overlay">
+              <div class="status-indicator">
+                <div class="pulse-dot"></div>
+                <span>Tracking active</span>
+              </div>
+              @if(isCalibrated) {
+                <div class="calibration-indicator">
+                  <mat-icon>check_circle</mat-icon>
+                  <span>Calibrated</span>
+                </div>
+              }
             </div>
           }
         </div>

@@ -1,13 +1,18 @@
-import { Component, ElementRef, ViewChild, OnDestroy, OnInit } from '@angular/core';
+import { Component, ElementRef, ViewChild, OnDestroy, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 
 // TensorFlow.js imports
 import * as tf from '@tensorflow/tfjs';
 import * as faceLandmarksDetection from '@tensorflow-models/face-landmarks-detection';
+
+// Model imports
+import { PupilTrackerConfig, ConcentrationMetrics, PupilMeasurement, CalibrationData } from '../models';
 
 
 @Component({
@@ -18,7 +23,9 @@ import * as faceLandmarksDetection from '@tensorflow-models/face-landmarks-detec
     MatCardModule,
     MatButtonModule,
     MatProgressBarModule,
-    MatIconModule
+    MatIconModule,
+    MatProgressSpinnerModule,
+    MatSnackBarModule
   ],
   templateUrl: './pupil-concentration-tracker.component.html',
   styleUrls: ['./pupil-concentration-tracker.component.css']
@@ -28,30 +35,64 @@ export class PupilConcentrationTrackerComponent implements OnInit, OnDestroy {
   @ViewChild('video') videoElement!: ElementRef<HTMLVideoElement>;
   @ViewChild('canvas') canvasElement!: ElementRef<HTMLCanvasElement>;
   
+  // Public properties for UI binding
   concentrationLevel: number = 0; 
   leftPupilSize: number = 0; 
-  rightPupilSize: number =0; 
+  rightPupilSize: number = 0; 
   isTracking: boolean = false;
-  
   isCalibrated: boolean = false;
-  // New detector instead of old model
+  isLoading: boolean = false;
+  isModelLoaded: boolean = false;
+  errorMessage: string = '';
+  calibrationProgress: number = 0;
+  
+  // Enhanced metrics for better UI
+  metrics: ConcentrationMetrics = {
+    level: 0,
+    leftPupilSize: 0,
+    rightPupilSize: 0,
+    averagePupilSize: 0,
+    dilationRatio: 1.0,
+    stability: 0,
+    isCalibrated: false,
+    calibrationProgress: 0
+  };
+
+  // Private properties for internal state management
   private detector: faceLandmarksDetection.FaceLandmarksDetector | null = null;
   private stream: MediaStream | null = null;
   private animationId: number = 0;
+  private lastDetectionTime = 0;
   private baselinePupilSize = 0;
   private pupilSizeHistory: number[] = [];
+  private faceDetectionCount = 0;
+  private lastValidPupilSizes = { left: 0, right: 0 };
 
+  // Optimized configuration
+  private config: PupilTrackerConfig = {
+    frameRate: 30,
+    smoothingFactor: 0.3,
+    sensitivity: 2.0,
+    calibrationFrames: 30,
+    maxHistorySize: 100,
+    minPupilSize: 2,
+    maxPupilSize: 50
+  };
 
+  // Legacy settings for backward compatibility
   settings = {
     sensitivity: 2,
     smoothing: 3,
     threshold: 100
   };
   
-  constructor() {}
+  constructor(
+    private cdr: ChangeDetectorRef,
+    private snackBar: MatSnackBar
+  ) {}
   
   async ngOnInit() {
-    await this.loadModel();
+    // Model will be loaded when user clicks "Start Tracking"
   }
   
   ngOnDestroy() {
@@ -67,6 +108,10 @@ export class PupilConcentrationTrackerComponent implements OnInit, OnDestroy {
    */
   async loadModel() {
     try {
+      this.isLoading = true;
+      this.errorMessage = '';
+      this.cdr.detectChanges();
+
       console.log('Loading face detection model...');
       await tf.ready();
 
@@ -79,9 +124,15 @@ export class PupilConcentrationTrackerComponent implements OnInit, OnDestroy {
       };
 
       this.detector = await faceLandmarksDetection.createDetector(model, detectorConfig);
+      this.isModelLoaded = true;
       console.log('Model loaded successfully');
     } catch (error) {
       console.error('Error loading model:', error);
+      this.errorMessage = 'Failed to load face detection model. Please refresh the page.';
+      this.showMessage(this.errorMessage, 'error');
+    } finally {
+      this.isLoading = false;
+      this.cdr.detectChanges();
     }
   }
 
@@ -93,10 +144,26 @@ export class PupilConcentrationTrackerComponent implements OnInit, OnDestroy {
    */
   
   async startTracking() {
+    if (!this.detector) {
+      await this.loadModel();
+    }
+    
+    if (!this.detector) {
+      return;
+    }
+
     try {
-      this.stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: 640, height: 480, facingMode: 'user' }
-      });
+      // Optimized camera constraints for better performance
+      const constraints: MediaStreamConstraints = {
+        video: {
+          width: { ideal: 640 },
+          height: { ideal: 480 },
+          frameRate: { ideal: this.config.frameRate, max: 30 },
+          facingMode: 'user'
+        }
+      };
+
+      this.stream = await navigator.mediaDevices.getUserMedia(constraints);
 
       const video = this.videoElement.nativeElement;
       video.srcObject = this.stream;
@@ -104,11 +171,13 @@ export class PupilConcentrationTrackerComponent implements OnInit, OnDestroy {
       video.onloadedmetadata = () => {
         video.play();
         this.isTracking = true;
+        this.resetCalibration();
         this.startDetection();
+        this.showMessage('Tracking started successfully!', 'success');
       };
     } catch (error) {
       console.error('Error accessing webcam:', error);
-      alert('Unable to access camera. Please ensure camera permissions are granted.');
+      this.showMessage('Unable to access camera. Please ensure camera permissions are granted.', 'error');
     }
   }
 
@@ -119,13 +188,25 @@ export class PupilConcentrationTrackerComponent implements OnInit, OnDestroy {
    * @returns {Promise<void>}
    */
   async startDetection() {
-    if (!this.detector || !this.startTracking) return;
+    if (!this.detector || !this.isTracking) return;
+
+    const now = performance.now();
+    const timeSinceLastDetection = now - this.lastDetectionTime;
+    const targetInterval = 1000 / this.config.frameRate;
+
+    // Frame rate limiting for better performance
+    if (timeSinceLastDetection < targetInterval) {
+      this.animationId = requestAnimationFrame(() => this.startDetection());
+      return;
+    }
+
+    this.lastDetectionTime = now;
 
     const video = this.videoElement.nativeElement;
     const canvas = this.canvasElement.nativeElement;
     const ctx = canvas.getContext('2d');
 
-    if (!ctx || !video.videoWidth) {
+    if (!ctx || !video.videoWidth || video.readyState !== video.HAVE_ENOUGH_DATA) {
       this.animationId = requestAnimationFrame(() => this.startDetection());
       return;
     }
@@ -139,12 +220,14 @@ export class PupilConcentrationTrackerComponent implements OnInit, OnDestroy {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       if (faces && faces.length > 0) {
+        this.faceDetectionCount++;
         this.processFaceDetection(ctx, faces[0]);
       } else {
         this.resetCurrentMetrics();
       }
     } catch (error) {
       console.error('Detection error:', error);
+      this.showMessage('Detection error occurred', 'error');
     }
 
     this.animationId = requestAnimationFrame(() => this.startDetection());
@@ -246,16 +329,14 @@ export class PupilConcentrationTrackerComponent implements OnInit, OnDestroy {
   }
 
   
+  
   /**
-   * Calculate the pupil size (diameter) in mm from the keypoints of one eye.
-   * The calculation uses the iris points (474, 476, 477, 475 for left eye and 469, 471, 472, 470 for right eye)
-   * and the horizontal distance between the eye corners (33, 133 for left eye and 362, 263 for right eye) as a reference.
-   * The pupil size is estimated by averaging the vertical and horizontal distances of the iris points.
-   * The result is then converted from pixels to mm using the reference eye width.
-   * The result is clamped to a reasonable range of 1.5 to 9.0 mm to avoid noise.
-   * @param keypoints The keypoints of the face mesh.
-   * @param side The side of the face (left or right).
-   * @returns The estimated pupil size in mm.
+   * Calculates the pupil size (diameter in pixels) for a given eye by using the
+   * iris landmarks from the MediaPipeFaceMesh model. The landmarks are only available
+   * when the model is loaded with the `refineLandmarks: true` option.
+   * @param keypoints The keypoints detected by the model.
+   * @param side The side of the face to calculate the pupil size for (either 'left' or 'right').
+   * @returns The pupil diameter in pixels, or 0 if not all iris points are detected.
    */
   calculatePupilSize(keypoints: any[], side: 'left' | 'right'): number {
     // The MediaPipeFaceMesh model with `refineLandmarks: true` returns 478 keypoints.
@@ -295,62 +376,86 @@ export class PupilConcentrationTrackerComponent implements OnInit, OnDestroy {
    */
   updateConcentration() {
     const averagePupilSize = (this.leftPupilSize + this.rightPupilSize) / 2;
-    if (averagePupilSize <= 0) {
+    
+    // Validate pupil size
+    if (averagePupilSize <= 0 || averagePupilSize < this.config.minPupilSize || averagePupilSize > this.config.maxPupilSize) {
       this.concentrationLevel = this.smoothValue(this.concentrationLevel, 0);
+      this.updateMetrics();
       return;
     }
 
+    // Add to history with size limits
     this.pupilSizeHistory.push(averagePupilSize);
-    if (this.pupilSizeHistory.length > 100) this.pupilSizeHistory.shift();
+    if (this.pupilSizeHistory.length > this.config.maxHistorySize) {
+      this.pupilSizeHistory.shift();
+    }
 
-    if (!this.isCalibrated && this.pupilSizeHistory.length >= 30) {
-      // Filter out any zeros that might have slipped in, just in case.
-      const validHistory = this.pupilSizeHistory.slice(0, 30).filter(s => s > 0);
-      if (validHistory.length > 15) { // require at least 15 valid samples
+    // Update calibration progress
+    this.calibrationProgress = Math.min(100, (this.pupilSizeHistory.length / this.config.calibrationFrames) * 100);
+
+    // Auto-calibration
+    if (!this.isCalibrated && this.pupilSizeHistory.length >= this.config.calibrationFrames) {
+      const validHistory = this.pupilSizeHistory
+        .slice(0, this.config.calibrationFrames)
+        .filter(s => s > this.config.minPupilSize && s < this.config.maxPupilSize);
+      
+      if (validHistory.length >= this.config.calibrationFrames * 0.5) {
         this.baselinePupilSize = validHistory.reduce((a, b) => a + b, 0) / validHistory.length;
         this.isCalibrated = true;
+        this.metrics.isCalibrated = true;
+        this.showMessage('Calibration complete! Tracking concentration levels.', 'success');
+        this.cdr.detectChanges();
       }
     }
 
     if (this.isCalibrated && this.baselinePupilSize > 0) {
       const dilationRatio = averagePupilSize / this.baselinePupilSize;
       const variability = this.calculatePupilVariability();
+      const stability = this.calculateStability();
 
-      // --- New, more intuitive formula ---
-      // We'll calculate a score from 0-100 based on pupil dilation and stability.
-      // Dilation can indicate cognitive load, and stability can indicate focus.
-
-      // 1. Dilation Score (0-80 points)
-      // We assume peak concentration happens with a slight pupil dilation (e.g., 10-25% larger).
-      // A dilation ratio around 1.0 is neutral. Ratios below indicate less focus, above indicate more.
-      // We'll use a non-linear mapping to better represent this.
-      let dilationScore = 0;
-      if (dilationRatio >= 1.0) {
-        // Score increases as dilation goes from 1.0 up to a max of around 1.25
-        // A ratio of 1.0 (no change) is now considered moderately focused.
-        const effect = Math.min(1, (dilationRatio - 1.0) / 0.30); // Normalize effect range 1.0 -> 1.30
-        dilationScore = 50 + effect * 30; // Base score of 50, up to 80
-      } else {
-        // Score decreases as dilation goes from 1.0 down to 0.8
-        // A constricted pupil suggests lower concentration.
-        const effect = (1.0 - Math.max(0.75, dilationRatio)) / 0.25; // Normalize effect range 1.0 -> 0.75
-        dilationScore = 50 - effect * 50; // Decrease from base score of 50
-      }
-
-      // 2. Stability Score (0-20 points)
-      // Less variability (more stable pupil size) indicates higher focus.
-      // A variability of 0 is perfect stability, and 1 is max instability.
-      const stabilityScore = (1 - Math.min(1, variability * this.settings.sensitivity)) * 20;
-
-      // 3. Combine scores and clamp
-      let concentrationScore = dilationScore + stabilityScore;
-      concentrationScore = Math.max(0, Math.min(100, concentrationScore)); // Clamp to 0-100
-
+      // Enhanced concentration calculation
+      const concentrationScore = this.calculateConcentrationScore(dilationRatio, variability, stability);
+      
       this.concentrationLevel = this.smoothValue(this.concentrationLevel, concentrationScore);
+      this.updateMetrics(dilationRatio, stability);
     } else {
-      // Not calibrated yet, or bad calibration data.
-      // The UI will show the initial value of 0.
+      // Not calibrated yet
+      this.updateMetrics();
     }
+  }
+
+  private calculateConcentrationScore(dilationRatio: number, variability: number, stability: number): number {
+    // 1. Dilation Score (0-60 points) - More sophisticated curve
+    let dilationScore = 0;
+    if (dilationRatio >= 1.0) {
+      // Peak concentration at 1.1-1.2 dilation ratio
+      const optimalRange = Math.min(1, Math.max(0, (dilationRatio - 1.0) / 0.2));
+      dilationScore = 40 + optimalRange * 20; // 40-60 points
+    } else {
+      // Decreased concentration for constricted pupils
+      const constriction = (1.0 - Math.max(0.7, dilationRatio)) / 0.3;
+      dilationScore = 40 - constriction * 40; // 0-40 points
+    }
+
+    // 2. Stability Score (0-30 points) - Based on recent stability
+    const stabilityScore = Math.max(0, (1 - Math.min(1, variability * this.config.sensitivity)) * 30);
+
+    // 3. Focus Score (0-10 points) - Based on overall stability trend
+    const focusScore = Math.max(0, stability * 10);
+
+    // Combine and clamp
+    const totalScore = dilationScore + stabilityScore + focusScore;
+    return Math.max(0, Math.min(100, totalScore));
+  }
+
+  private updateMetrics(dilationRatio: number = 1.0, stability: number = 0) {
+    this.metrics.level = this.concentrationLevel;
+    this.metrics.leftPupilSize = this.leftPupilSize;
+    this.metrics.rightPupilSize = this.rightPupilSize;
+    this.metrics.averagePupilSize = (this.leftPupilSize + this.rightPupilSize) / 2;
+    this.metrics.dilationRatio = dilationRatio;
+    this.metrics.stability = stability;
+    this.metrics.isCalibrated = this.isCalibrated;
   }
   
   /**
@@ -369,6 +474,15 @@ export class PupilConcentrationTrackerComponent implements OnInit, OnDestroy {
     return Math.min(1, Math.sqrt(variance) / mean);
   }
 
+  private calculateStability(): number {
+    if (this.pupilSizeHistory.length < 20) return 0;
+    const recent = this.pupilSizeHistory.slice(-20);
+    const mean = recent.reduce((a, b) => a + b) / recent.length;
+    const variance = recent.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / recent.length;
+    const stability = Math.max(0, 1 - Math.sqrt(variance) / mean);
+    return Math.min(1, stability);
+  }
+
   /**
    * Smooths a value over time, by blending it with a new value.
    * The smoothing factor is between 0 and 1, where 0 means only the new value is used,
@@ -378,7 +492,7 @@ export class PupilConcentrationTrackerComponent implements OnInit, OnDestroy {
    * @return The smoothed value.
    */
   smoothValue(currentValue: number, newValue: number): number {
-    const smoothingFactor = this.settings.smoothing / 10;
+    const smoothingFactor = this.config.smoothingFactor;
     return currentValue * smoothingFactor + newValue * (1 - smoothingFactor);
   }
 
@@ -442,10 +556,18 @@ export class PupilConcentrationTrackerComponent implements OnInit, OnDestroy {
   recalibrate() {
     if (!this.isTracking) return;
     console.log('Recalibrating...');
+    this.resetCalibration();
+    this.showMessage('Recalibrating... Please look at the camera.', 'info');
+  }
+
+  private resetCalibration() {
     this.isCalibrated = false;
+    this.metrics.isCalibrated = false;
     this.baselinePupilSize = 0;
-    this.pupilSizeHistory = []; // Start collecting fresh data for a new baseline
-    this.concentrationLevel = 0; // Reset concentration during recalibration
+    this.pupilSizeHistory = [];
+    this.calibrationProgress = 0;
+    this.concentrationLevel = 0;
+    this.faceDetectionCount = 0;
   }
 
   /**
@@ -454,19 +576,66 @@ export class PupilConcentrationTrackerComponent implements OnInit, OnDestroy {
    * when the component is destroyed.
    */
   stopTracking() {
-    if (this.stream) {
-      this.stream.getTracks().forEach(track => track.stop());
-      this.stream = null;
-    }
-
+    // Cancel animation frame
     if (this.animationId) {
       cancelAnimationFrame(this.animationId);
       this.animationId = 0;
     }
 
+    // Stop camera stream
+    if (this.stream) {
+      this.stream.getTracks().forEach(track => track.stop());
+      this.stream = null;
+    }
+
+    // Clear video and canvas
+    if (this.videoElement?.nativeElement) {
+      this.videoElement.nativeElement.srcObject = null;
+    }
+
+    if (this.canvasElement?.nativeElement) {
+      const context = this.canvasElement.nativeElement.getContext('2d');
+      if (context) {
+        context.clearRect(0, 0, this.canvasElement.nativeElement.width, this.canvasElement.nativeElement.height);
+      }
+    }
+
     this.isTracking = false;
     this.resetCurrentMetrics();
-    this.recalibrate(); // Also reset calibration state on stop
+    this.resetCalibration();
+    this.showMessage('Tracking stopped', 'info');
+  }
+
+  private showMessage(message: string, type: 'success' | 'error' | 'info' = 'info') {
+    this.snackBar.open(message, 'Close', {
+      duration: 3000,
+      horizontalPosition: 'center',
+      verticalPosition: 'top',
+      panelClass: [`snackbar-${type}`]
+    });
+  }
+
+  // Public methods for configuration
+  updateSensitivity(sensitivity: number) {
+    this.config.sensitivity = Math.max(0.1, Math.min(5.0, sensitivity));
+    this.settings.sensitivity = Math.round(sensitivity);
+  }
+
+  updateSmoothing(smoothing: number) {
+    this.config.smoothingFactor = Math.max(0.1, Math.min(0.9, smoothing / 10));
+    this.settings.smoothing = Math.round(smoothing);
+  }
+
+  updateFrameRate(frameRate: number) {
+    this.config.frameRate = Math.max(15, Math.min(60, frameRate));
+  }
+
+  getConfig() {
+    return { ...this.config };
+  }
+
+  getMetrics() {
+    return { ...this.metrics };
   }
 
   

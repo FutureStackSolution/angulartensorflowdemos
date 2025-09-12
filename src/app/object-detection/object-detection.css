@@ -5,7 +5,7 @@
   margin: 0 auto;
 }
 
-.tracker-card {
+.detector-card {
   margin-bottom: 20px;
   box-shadow: 0 4px 8px rgba(0,0,0,0.1);
   border-radius: 12px;
@@ -35,43 +35,6 @@ mat-card-subtitle {
   margin: 8px 0 0 0;
 }
 
-/* Loading state */
-.loading-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-  padding: 40px;
-}
-
-.loading-container p {
-  margin: 0;
-  color: #666;
-  font-size: 16px;
-}
-
-/* Error message */
-.error-message {
-  background: #ffebee;
-  border: 1px solid #f44336;
-  border-radius: 8px;
-  padding: 16px;
-  margin: 16px 0;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.error-message mat-icon {
-  color: #f44336;
-}
-
-.error-message p {
-  margin: 0;
-  color: #d32f2f;
-  font-size: 14px;
-}
-
 /* Layout */
 .two-column-layout {
   display: flex;
@@ -91,8 +54,38 @@ mat-card-subtitle {
   align-items: flex-start;
 }
 
-/* Concentration meter */
-.concentration-meter {
+/* Loading state */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+}
+
+.loading-container p {
+  margin: 0;
+  color: #666;
+  font-size: 14px;
+}
+
+/* Error message */
+.error-message {
+  background: #ffebee;
+  border: 1px solid #f44336;
+  border-radius: 4px;
+  padding: 12px;
+  margin-bottom: 16px;
+}
+
+.error-message p {
+  margin: 0;
+  color: #d32f2f;
+  font-size: 14px;
+}
+
+/* Detection Status */
+.detection-status {
   margin: 20px 0;
   background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
   border-radius: 12px;
@@ -100,43 +93,7 @@ mat-card-subtitle {
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-/* Tracking status */
-.tracking-status {
-  margin: 20px 0;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.tracking-status h3 {
-  margin: 0 0 15px 0;
-  color: white;
-  font-size: 1.1em;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.tracking-status .status-active,
-.tracking-status .status-inactive {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: white;
-  font-weight: 500;
-}
-
-.tracking-status .status-active {
-  color: #4caf50;
-}
-
-.tracking-status .status-inactive {
-  color: rgba(255, 255, 255, 0.8);
-}
-
-.concentration-meter h3 {
+.detection-status h3 {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -145,62 +102,25 @@ mat-card-subtitle {
   font-size: 18px;
 }
 
-.concentration-value {
-  font-size: 32px;
-  font-weight: bold;
-  text-align: center;
-  margin: 16px 0 8px 0;
-  color: #2c3e50;
-}
-
-.concentration-status {
-  text-align: center;
-  margin-top: 8px;
-}
-
-.status-high {
+.status-active {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   color: #4caf50;
   font-weight: 600;
   font-size: 16px;
 }
 
-.status-medium {
-  color: #ff9800;
-  font-weight: 600;
-  font-size: 16px;
-}
-
-.status-low {
+.status-inactive {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   color: #f44336;
   font-weight: 600;
   font-size: 16px;
 }
 
-/* Calibration container */
-.calibration-container {
-  margin: 20px 0;
-  background: #e3f2fd;
-  border-radius: 8px;
-  padding: 16px;
-  border-left: 4px solid #2196f3;
-}
-
-.calibration-container h3 {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0 0 12px 0;
-  color: #1976d2;
-  font-size: 16px;
-}
-
-.calibration-container p {
-  margin: 8px 0 0 0;
-  color: #666;
-  font-size: 14px;
-}
-
-/* Enhanced stats container */
+/* Statistics container */
 .stats-container {
   margin: 20px 0;
   background: #f8f9fa;
@@ -218,13 +138,13 @@ mat-card-subtitle {
   font-size: 18px;
 }
 
-.metrics-grid {
+.stats-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 12px;
 }
 
-.metric-item {
+.stat-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -234,19 +154,19 @@ mat-card-subtitle {
   border: 1px solid #e9ecef;
 }
 
-.metric-label {
+.stat-label {
   font-weight: 500;
   color: #6c757d;
   font-size: 14px;
 }
 
-.metric-value {
+.stat-value {
   font-weight: 600;
   color: #495057;
   font-size: 16px;
 }
 
-/* Configuration container */
+/* Configuration controls */
 .config-container {
   margin: 20px 0;
   background: #fff3e0;
@@ -265,15 +185,17 @@ mat-card-subtitle {
 }
 
 .config-item {
-  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .config-item label {
-  display: block;
-  margin-bottom: 8px;
+  font-size: 14px;
   font-weight: 500;
   color: #333;
-  font-size: 14px;
+  margin-bottom: 8px;
+  display: block;
 }
 
 .slider {
@@ -311,6 +233,7 @@ mat-card-subtitle {
   opacity: 0.6;
   cursor: not-allowed;
 }
+
 
 /* Video container */
 .video-container {
@@ -366,32 +289,16 @@ mat-card-subtitle {
   right: 0;
   bottom: 0;
   pointer-events: none;
-  z-index: 10;
 }
 
 .status-indicator {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: rgba(0, 0, 0, 0.7);
-  color: white;
-  padding: 8px 12px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.calibration-indicator {
   position: absolute;
   top: 12px;
   right: 12px;
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(76, 175, 80, 0.9);
+  background: rgba(0, 0, 0, 0.7);
   color: white;
   padding: 8px 12px;
   border-radius: 20px;
@@ -472,8 +379,7 @@ h3 mat-icon,
 .status-inactive mat-icon,
 .status-active mat-icon,
 .error-message mat-icon,
-.placeholder-video mat-icon,
-.calibration-indicator mat-icon {
+.placeholder-video mat-icon {
   margin-right: 8px;
   vertical-align: middle;
 }
@@ -493,7 +399,7 @@ h3 mat-icon,
     min-width: unset;
   }
   
-  .metrics-grid {
+  .stats-grid {
     grid-template-columns: 1fr;
   }
   
