@@ -1,3 +1,10 @@
-<h1>Real-Time Object Detection</h1>
+<div>
+  @if(!isTracking){
+  <button mat-raised-button color="primary" (click)="startTracking()">Start Tracking</button>
+  }
+  @if(isTracking){
+  <button mat-raised-button color="warn" (click)="stopTracking()">Stop Tracking</button>
+  }
+</div>
 <video #video autoplay playsinline muted width="640" height="480"></video>
 <canvas #canvas width="640" height="480"></canvas>

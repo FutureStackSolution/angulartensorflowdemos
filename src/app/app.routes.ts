@@ -5,5 +5,5 @@ import { ObjectDetectionComponent } from './object-detection/object-detection';
 export const routes: Routes = [
   { path: 'eye-tracker', component: PupilConcentrationTrackerComponent },
   { path: 'object-detection', component: ObjectDetectionComponent },
-  { path: '', redirectTo: '/home', pathMatch: 'full' }
+  { path: '', redirectTo: '/eye-tracker', pathMatch: 'full' }
 ];
