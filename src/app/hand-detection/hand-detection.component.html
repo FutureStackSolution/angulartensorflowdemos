@@ -5,7 +5,7 @@
         <mat-icon>back_hand</mat-icon>
         Hand Detection
       </mat-card-title>
-      <mat-card-subtitle>Live camera feed with placeholder for hand landmarks</mat-card-subtitle>
+      <mat-card-subtitle>Live hand landmarks using TensorFlow.js</mat-card-subtitle>
     </mat-card-header>
 
     @if(errorMessage) {
@@ -20,7 +20,7 @@
         @if(isLoading) {
           <div class="loading-overlay">
             <mat-spinner diameter="56"></mat-spinner>
-            <div class="loading-text">Starting camera…</div>
+            <div class="loading-text">Loading…</div>
           </div>
         }
         <video #video autoplay playsinline muted width="640" height="480" [hidden]="!isTracking"></video>
