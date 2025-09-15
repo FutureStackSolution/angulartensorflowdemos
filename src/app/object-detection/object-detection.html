@@ -8,7 +8,6 @@
       <mat-card-subtitle>Real-time object detection using TensorFlow.js</mat-card-subtitle>
     </mat-card-header>
     
-    <!-- Loading indicator -->
     <!-- Error message -->
     @if(errorMessage) {
       <div class="error-message">
@@ -145,6 +144,12 @@
       
       <div class="camera-column">
         <div class="video-container">
+          @if(isLoading) {
+            <div class="loading-overlay">
+              <mat-spinner diameter="56"></mat-spinner>
+              <div class="loading-text">Loading model…</div>
+            </div>
+          }
           <video #video autoplay playsinline muted width="640" height="480" [hidden]="!isTracking"></video>
           <canvas #canvas width="640" height="480" [hidden]="!isTracking"></canvas>
           
