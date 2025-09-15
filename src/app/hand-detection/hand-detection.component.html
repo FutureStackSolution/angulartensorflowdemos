@@ -1,5 +1,5 @@
 <div class="container">
-  <mat-card class="hand-card">
+  <mat-card class="detector-card">
     <mat-card-header>
       <mat-card-title>
         <mat-icon>back_hand</mat-icon>
@@ -15,50 +15,98 @@
       </div>
     }
 
-    <mat-card-content class="content-layout">
-      <div class="video-container">
-        @if(isLoading) {
-          <div class="loading-overlay">
-            <mat-spinner diameter="56"></mat-spinner>
-            <div class="loading-text">Loading…</div>
-          </div>
-        }
-        <video #video autoplay playsinline muted width="640" height="480" [hidden]="!isTracking"></video>
-        <canvas #canvas width="640" height="480" [hidden]="!isTracking"></canvas>
-
-        @if(!isTracking) {
-          <div class="placeholder-video">
-            <mat-icon>videocam_off</mat-icon>
-            <p>Camera feed will appear here when started</p>
-          </div>
-        }
-      </div>
-
-      <mat-card-actions>
-        @if(!isTracking) {
-          <button mat-raised-button color="primary" (click)="startTracking()" [disabled]="isLoading">
-            @if(!isLoading) {
-              <ng-container>
-                <mat-icon>play_arrow</mat-icon>
-                <span>Start</span>
-              </ng-container>
-            }
-            @if(isLoading) {
-              <ng-container>
-                <mat-spinner diameter="20"></mat-spinner>
-                <span>Starting…</span>
-              </ng-container>
-            }
-          </button>
-        }
+    <mat-card-content class="two-column-layout">
+      <div class="metrics-column">
+        <div class="detection-status">
+          <h3>
+            <mat-icon>psychology</mat-icon>
+            Detection Status
+          </h3>
+          @if(isTracking) {
+            <div class="status-active">
+              <div class="pulse-dot"></div>
+              <span>Detection Active</span>
+            </div>
+          } @else if(isModelLoaded) {
+            <div class="status-inactive">
+              <mat-icon>pause_circle</mat-icon>
+              <span>Ready to Start</span>
+            </div>
+          } @else {
+            <div class="status-inactive">
+              <mat-icon>download</mat-icon>
+              <span>Model Not Loaded</span>
+            </div>
+          }
+        </div>
 
         @if(isTracking) {
-          <button mat-raised-button color="warn" (click)="stopTracking()">
-            <mat-icon>stop</mat-icon>
-            <span>Stop</span>
-          </button>
+          <div class="stats-container">
+            <h3>
+              <mat-icon>analytics</mat-icon>
+              Live Statistics
+            </h3>
+            <div class="stats-grid">
+              <div class="stat-item">
+                <span class="stat-label">Hands Detected:</span>
+                <span class="stat-value">{{ getHandsCount() }}</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">Runtime:</span>
+                <span class="stat-value">{{ getRuntime() }}</span>
+              </div>
+            </div>
+          </div>
         }
-      </mat-card-actions>
+
+        <mat-card-actions>
+          @if(!isTracking) {
+            <button mat-raised-button color="primary" (click)="startTracking()" [disabled]="isLoading">
+              @if(!isLoading) {
+                <ng-container>
+                  <mat-icon>play_arrow</mat-icon>
+                  <span>Start Detection</span>
+                </ng-container>
+              }
+              @if(isLoading) {
+                <ng-container>
+                  <mat-spinner diameter="20"></mat-spinner>
+                  <span>Loading Model...</span>
+                </ng-container>
+              }
+            </button>
+          }
+
+          @if(isTracking) {
+            <button mat-raised-button color="warn" (click)="stopTracking()">
+              <ng-container>
+                <mat-icon>stop</mat-icon>
+                <span>Stop Detection</span>
+              </ng-container>
+            </button>
+          }
+        </mat-card-actions>
+      </div>
+
+      <div class="camera-column">
+        <div class="video-container">
+          @if(isLoading) {
+            <div class="loading-overlay">
+              <mat-spinner diameter="56"></mat-spinner>
+              <div class="loading-text">Loading model…</div>
+            </div>
+          }
+          <video #video autoplay playsinline muted width="640" height="480" [hidden]="!isTracking"></video>
+          <canvas #canvas width="640" height="480" [hidden]="!isTracking"></canvas>
+
+          @if(!isTracking) {
+            <div class="placeholder-video">
+              <mat-icon>videocam_off</mat-icon>
+              <p>Camera feed will appear here when detection is active</p>
+            </div>
+          }
+        </div>
+      </div>
     </mat-card-content>
   </mat-card>
 </div>

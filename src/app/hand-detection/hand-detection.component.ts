@@ -32,6 +32,7 @@ export class HandDetectionComponent implements OnDestroy {
   private targetFps = 30;
   private consecutiveZeroDetections = 0;
   private runtime: 'tfjs' | 'mediapipe' = 'tfjs';
+  private currentHandsCount = 0;
 
   constructor(private cdr: ChangeDetectorRef, private snackBar: MatSnackBar) {}
 
@@ -168,6 +169,7 @@ export class HandDetectionComponent implements OnDestroy {
 
     try {
       const hands = await this.detector!.estimateHands(video, { flipHorizontal: true });
+      this.currentHandsCount = hands?.length || 0;
       if (!hands || hands.length === 0) {
         this.consecutiveZeroDetections++;
       } else {
@@ -234,6 +236,14 @@ export class HandDetectionComponent implements OnDestroy {
     ctx.font = '12px Arial';
     ctx.fillText(`Hands: ${hands.length} | Runtime: ${this.runtime}`, 8, 18);
     ctx.restore();
+  }
+
+  // Template helpers
+  getHandsCount() {
+    return this.currentHandsCount;
+  }
+  getRuntime() {
+    return this.runtime;
   }
 
   private showMessage(message: string, type: 'success' | 'error' | 'info' = 'info') {
