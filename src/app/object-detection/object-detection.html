@@ -8,7 +8,6 @@
       <mat-card-subtitle>Real-time object detection using TensorFlow.js</mat-card-subtitle>
     </mat-card-header>
     
-    <!-- Loading indicator -->
     <!-- Error message -->
     @if(errorMessage) {
       <div class="error-message">
@@ -118,20 +117,26 @@
           @if(!isTracking) {
             <button mat-raised-button color="primary" (click)="startTracking()" [disabled]="isLoading">
               @if(!isLoading) {
-                <mat-icon>play_arrow</mat-icon>
-                <span>Start Detection</span>
+                <ng-container>
+                  <mat-icon>play_arrow</mat-icon>
+                  <span>Start Detection</span>
+                </ng-container>
               }
               @if(isLoading) {
-                <mat-spinner diameter="20"></mat-spinner>
-                <span>Loading Model...</span>
+                <ng-container>
+                  <mat-spinner diameter="20"></mat-spinner>
+                  <span>Loading Model...</span>
+                </ng-container>
               }
             </button>
           }
           
           @if(isTracking) {
             <button mat-raised-button color="warn" (click)="stopTracking()">
-              <mat-icon>stop</mat-icon>
-              <span>Stop Detection</span>
+              <ng-container>
+                <mat-icon>stop</mat-icon>
+                <span>Stop Detection</span>
+              </ng-container>
             </button>
           }
         </mat-card-actions>
@@ -139,6 +144,12 @@
       
       <div class="camera-column">
         <div class="video-container">
+          @if(isLoading) {
+            <div class="loading-overlay">
+              <mat-spinner diameter="56"></mat-spinner>
+              <div class="loading-text">Loading model…</div>
+            </div>
+          }
           <video #video autoplay playsinline muted width="640" height="480" [hidden]="!isTracking"></video>
           <canvas #canvas width="640" height="480" [hidden]="!isTracking"></canvas>
           
