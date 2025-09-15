@@ -29,10 +29,14 @@ export class HandDetectionComponent implements OnDestroy {
   private mediaStream: MediaStream | null = null;
   private animationId: number | null = null;
   private lastDetectTime = 0;
-  private targetFps = 30;
+  private targetFps = 20;
   private consecutiveZeroDetections = 0;
   private runtime: 'tfjs' | 'mediapipe' = 'tfjs';
   private currentHandsCount = 0;
+  private detectorCanvas: HTMLCanvasElement | null = null;
+  private detectorCtx: CanvasRenderingContext2D | null = null;
+  private scaleX = 1;
+  private scaleY = 1;
 
   constructor(private cdr: ChangeDetectorRef, private snackBar: MatSnackBar) {}
 
@@ -109,6 +113,21 @@ export class HandDetectionComponent implements OnDestroy {
         video.play();
         this.isTracking = true;
         this.isLoading = false;
+        // Initialize display canvas size and low-res detector canvas once
+        const displayCanvas = this.canvasRef.nativeElement;
+        displayCanvas.width = video.videoWidth || 640;
+        displayCanvas.height = video.videoHeight || 480;
+
+        // Setup low-resolution detector canvas to speed up model
+        const targetDetectorWidth = 320;
+        const aspect = displayCanvas.height / displayCanvas.width || (480 / 640);
+        const targetDetectorHeight = Math.round(targetDetectorWidth * aspect);
+        this.detectorCanvas = document.createElement('canvas');
+        this.detectorCanvas.width = targetDetectorWidth;
+        this.detectorCanvas.height = targetDetectorHeight;
+        this.detectorCtx = this.detectorCanvas.getContext('2d');
+        this.scaleX = displayCanvas.width / targetDetectorWidth;
+        this.scaleY = displayCanvas.height / targetDetectorHeight;
         this.cdr.detectChanges();
         this.loop();
         this.showMessage(`Hand detection started (${this.runtime})`, 'success');
@@ -163,12 +182,27 @@ export class HandDetectionComponent implements OnDestroy {
       return;
     }
 
-    canvas.width = video.videoWidth || 640;
-    canvas.height = video.videoHeight || 480;
+    // Avoid resizing canvas every frame unless it changed
+    const desiredW = video.videoWidth || 640;
+    const desiredH = video.videoHeight || 480;
+    if (canvas.width !== desiredW || canvas.height !== desiredH) {
+      canvas.width = desiredW;
+      canvas.height = desiredH;
+      if (this.detectorCanvas) {
+        this.scaleX = canvas.width / this.detectorCanvas.width;
+        this.scaleY = canvas.height / this.detectorCanvas.height;
+      }
+    }
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
     try {
-      const hands = await this.detector!.estimateHands(video, { flipHorizontal: true });
+      let hands: handPoseDetection.Hand[] = [];
+      if (this.detectorCtx && this.detectorCanvas) {
+        this.detectorCtx.drawImage(video, 0, 0, this.detectorCanvas.width, this.detectorCanvas.height);
+        hands = await this.detector!.estimateHands(this.detectorCanvas, { flipHorizontal: true });
+      } else {
+        hands = await this.detector!.estimateHands(video, { flipHorizontal: true });
+      }
       this.currentHandsCount = hands?.length || 0;
       if (!hands || hands.length === 0) {
         this.consecutiveZeroDetections++;
@@ -202,13 +236,16 @@ export class HandDetectionComponent implements OnDestroy {
     ctx.save();
     ctx.lineWidth = 2;
     hands.forEach(hand => {
-      // Draw keypoints
+      // Map keypoints into display space if using low-res detector canvas
+      const mapped = hand.keypoints.map((kp: any) => ({ name: kp.name, x: kp.x * this.scaleX, y: kp.y * this.scaleY }));
       ctx.fillStyle = '#4ECDC4';
-      hand.keypoints.forEach((kp: any) => {
-        ctx.beginPath();
-        ctx.arc(kp.x, kp.y, 3, 0, Math.PI * 2);
-        ctx.fill();
-      });
+      ctx.beginPath();
+      for (let i = 0; i < mapped.length; i++) {
+        const p = mapped[i];
+        ctx.moveTo(p.x + 2, p.y);
+        ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
+      }
+      ctx.fill();
 
       // Draw connections between keypoints (simple finger lines)
       ctx.strokeStyle = '#FF6B6B';
@@ -220,16 +257,17 @@ export class HandDetectionComponent implements OnDestroy {
         ['wrist', 'pinky_finger_mcp', 'pinky_finger_pip', 'pinky_finger_dip', 'pinky_finger_tip']
       ];
       const byName: Record<string, any> = {};
-      hand.keypoints.forEach((kp: any) => { byName[kp.name] = kp; });
-      fingers.forEach(path => {
+      for (let i = 0; i < mapped.length; i++) byName[mapped[i].name] = mapped[i];
+      for (let f = 0; f < fingers.length; f++) {
+        const path = fingers[f];
         ctx.beginPath();
-        path.forEach((name, i) => {
-          const p = byName[name];
-          if (!p) return;
+        for (let i = 0; i < path.length; i++) {
+          const p = byName[path[i]];
+          if (!p) continue;
           if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
-        });
+        }
         ctx.stroke();
-      });
+      }
     });
     // Overlay debug text
     ctx.fillStyle = 'rgba(0,0,0,0.6)';
