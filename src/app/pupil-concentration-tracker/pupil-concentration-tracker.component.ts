@@ -95,6 +95,10 @@ export class PupilConcentrationTrackerComponent implements OnInit, OnDestroy {
     // Model will be loaded when user clicks "Start Tracking"
   }
   
+  /**
+   * Lifecycle hook that runs on component destruction.
+   * Ensures tracking is stopped and resources are released.
+   */
   ngOnDestroy() {
     this.stopTracking();
   }
@@ -105,6 +109,12 @@ export class PupilConcentrationTrackerComponent implements OnInit, OnDestroy {
    * the refineLandmarks option enabled. If the model is loaded successfully, it logs a success
    * message to the console. If there is an error, it logs the error message to the console.
    * @returns {Promise<void>}
+   */
+  /**
+   * Loads and initializes the MediaPipe Face Mesh detector with refined landmarks.
+   * Sets the loading state, handles errors, and marks the model as loaded on success.
+   *
+   * @returns Promise that resolves when the detector is ready.
    */
   async loadModel() {
     try {
@@ -143,6 +153,12 @@ export class PupilConcentrationTrackerComponent implements OnInit, OnDestroy {
    * @returns {Promise<void>}
    */
   
+  /**
+   * Starts camera access and the face detection loop. Lazily loads the model if necessary.
+   * Shows feedback via snackbar and initializes calibration.
+   *
+   * @returns Promise that resolves after attempting to start tracking.
+   */
   async startTracking() {
     if (!this.detector) {
       await this.loadModel();
@@ -186,6 +202,10 @@ export class PupilConcentrationTrackerComponent implements OnInit, OnDestroy {
    * recursively using requestAnimationFrame to continuously detect faces
    * and update the metrics.
    * @returns {Promise<void>}
+   */
+  /**
+   * Main detection loop executed via requestAnimationFrame. Enforces a target
+   * frame rate, estimates faces, updates/draws metrics, and schedules the next frame.
    */
   async startDetection() {
     if (!this.detector || !this.isTracking) return;
@@ -240,6 +260,13 @@ export class PupilConcentrationTrackerComponent implements OnInit, OnDestroy {
    * @param ctx The canvas 2D drawing context.
    * @param face The face detection result.
    */
+  /**
+   * Processes a single face detection result: validates open eyes,
+   * draws helpers, updates pupil sizes and concentration metrics.
+   *
+   * @param ctx Canvas 2D drawing context.
+   * @param face The face detection output from the detector.
+   */
   processFaceDetection(ctx: CanvasRenderingContext2D, face: any) {
     if (!face.keypoints) return;
 
@@ -275,6 +302,13 @@ export class PupilConcentrationTrackerComponent implements OnInit, OnDestroy {
    * @param eye The eye to extract keypoints for (either 'left' or 'right').
    * @returns An array of keypoints for the specified eye, or null if the extraction fails.
    */
+  /**
+   * Extracts landmark points for the specified eye.
+   *
+   * @param keypoints Full set of MediaPipe keypoints.
+   * @param eye Which eye region to extract.
+   * @returns Array of keypoints for the eye or null on failure.
+   */
   extractEyeRegion(keypoints: any[], eye: 'left' | 'right'): any[] | null {
     try {
       const leftEyeIndices = [33, 7, 163, 144, 145, 153, 154, 155, 133, 173, 157, 158, 159, 160, 161, 246];
@@ -299,6 +333,14 @@ export class PupilConcentrationTrackerComponent implements OnInit, OnDestroy {
    * cause a division by zero error), we return false.
    * @param keypoints The list of keypoints for the face.
    * @param side The side of the face to check (either 'left' or 'right').
+   */
+  /**
+   * Determines if an eye is open based on the eye aspect ratio
+   * computed from eyelid and corner landmarks.
+   *
+   * @param keypoints Full set of MediaPipe keypoints.
+   * @param side Eye side to check.
+   * @returns True if the eye appears open; otherwise false.
    */
   isEyeOpen(keypoints: any[], side: 'left' | 'right'): boolean {
     if (!keypoints || keypoints.length < 478) return false;
@@ -338,6 +380,14 @@ export class PupilConcentrationTrackerComponent implements OnInit, OnDestroy {
    * @param side The side of the face to calculate the pupil size for (either 'left' or 'right').
    * @returns The pupil diameter in pixels, or 0 if not all iris points are detected.
    */
+  /**
+   * Estimates pupil diameter using iris landmarks (requires refineLandmarks).
+   * Uses average of vertical and horizontal iris spans.
+   *
+   * @param keypoints Full set of MediaPipe keypoints.
+   * @param side Eye side to compute size for.
+   * @returns Estimated pupil size in pixels; 0 if invalid.
+   */
   calculatePupilSize(keypoints: any[], side: 'left' | 'right'): number {
     // The MediaPipeFaceMesh model with `refineLandmarks: true` returns 478 keypoints.
     // The iris landmarks are only available with this setting.
@@ -373,6 +423,10 @@ export class PupilConcentrationTrackerComponent implements OnInit, OnDestroy {
    * 2. Stability score (0-40 points): Maps the pupil size variability to a score, with a
    *    variability of 0 giving a high score and a variability of 1 giving a low score.
    * 3. Combine scores and clamp to 0-100.
+   */
+  /**
+   * Updates concentration metrics based on current pupil sizes.
+   * Handles calibration progress, history maintenance, and smoothing.
    */
   updateConcentration() {
     const averagePupilSize = (this.leftPupilSize + this.rightPupilSize) / 2;
@@ -424,6 +478,14 @@ export class PupilConcentrationTrackerComponent implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * Combines dilation, variability, and stability into a 0-100 score.
+   *
+   * @param dilationRatio Current average pupil size vs baseline.
+   * @param variability Short-term variability (0-1).
+   * @param stability Longer-term stability (0-1).
+   * @returns Concentration score in the range [0, 100].
+   */
   private calculateConcentrationScore(dilationRatio: number, variability: number, stability: number): number {
     // 1. Dilation Score (0-60 points) - More sophisticated curve
     let dilationScore = 0;
@@ -448,6 +510,13 @@ export class PupilConcentrationTrackerComponent implements OnInit, OnDestroy {
     return Math.max(0, Math.min(100, totalScore));
   }
 
+  /**
+   * Copies current instantaneous values into the public metrics object
+   * for template binding.
+   *
+   * @param dilationRatio Dilation ratio used for metrics (default 1.0).
+   * @param stability Stability value used for metrics (default 0).
+   */
   private updateMetrics(dilationRatio: number = 1.0, stability: number = 0) {
     this.metrics.level = this.concentrationLevel;
     this.metrics.leftPupilSize = this.leftPupilSize;
@@ -466,6 +535,12 @@ export class PupilConcentrationTrackerComponent implements OnInit, OnDestroy {
    * The result is clamped to be no larger than 1.
    * @return The pupil size variability, between 0 and 1.
    */
+  /**
+   * Calculates recent variability of pupil size over the last 10 samples
+   * normalized by the mean, clamped to [0,1].
+   *
+   * @returns Variability value in [0, 1].
+   */
   calculatePupilVariability(): number {
     if (this.pupilSizeHistory.length < 10) return 0;
     const recent = this.pupilSizeHistory.slice(-10);
@@ -474,6 +549,12 @@ export class PupilConcentrationTrackerComponent implements OnInit, OnDestroy {
     return Math.min(1, Math.sqrt(variance) / mean);
   }
 
+  /**
+   * Calculates stability over the last 20 samples based on normalized
+   * standard deviation, mapped to [0,1] where higher is more stable.
+   *
+   * @returns Stability value in [0, 1].
+   */
   private calculateStability(): number {
     if (this.pupilSizeHistory.length < 20) return 0;
     const recent = this.pupilSizeHistory.slice(-20);
@@ -491,6 +572,13 @@ export class PupilConcentrationTrackerComponent implements OnInit, OnDestroy {
    * @param newValue The new value to be blended in.
    * @return The smoothed value.
    */
+  /**
+   * Applies exponential smoothing to blend the current and new values.
+   *
+   * @param currentValue Existing value to be smoothed.
+   * @param newValue Incoming value.
+   * @returns Smoothed value.
+   */
   smoothValue(currentValue: number, newValue: number): number {
     const smoothingFactor = this.config.smoothingFactor;
     return currentValue * smoothingFactor + newValue * (1 - smoothingFactor);
@@ -500,6 +588,12 @@ export class PupilConcentrationTrackerComponent implements OnInit, OnDestroy {
    * Draws a green box around the detected face, to help illustrate the tracking.
    * @param ctx The canvas context to draw on.
    * @param face The face object from the face detection model, containing the box coordinates.
+   */
+  /**
+   * Draws a rectangle around the detected face for visualization.
+   *
+   * @param ctx Canvas context to draw on.
+   * @param face Face object containing box coordinates.
    */
   drawFaceBox(ctx: CanvasRenderingContext2D, face: any) {
     if (!face.box) return;
@@ -516,6 +610,13 @@ export class PupilConcentrationTrackerComponent implements OnInit, OnDestroy {
    * @param ctx The canvas context to draw on.
    * @param leftEye An array of points representing the left eye, if detected.
    * @param rightEye An array of points representing the right eye, if detected.
+   */
+  /**
+   * Draws small markers on the eyes for demonstration purposes.
+   *
+   * @param ctx Canvas context to draw on.
+   * @param leftEye Landmarks for the left eye.
+   * @param rightEye Landmarks for the right eye.
    */
   drawEyeIndicators(ctx: CanvasRenderingContext2D, leftEye: any[], rightEye: any[]) {
     ctx.fillStyle = '#ff6b6b';
@@ -539,6 +640,10 @@ export class PupilConcentrationTrackerComponent implements OnInit, OnDestroy {
    * This is called when the face detection is lost, or when the user
    * manually stops tracking.
    */
+  /**
+   * Resets instantaneous pupil sizes and concentration level.
+   * Used when tracking is lost or stopped.
+   */
   resetCurrentMetrics() {
     this.leftPupilSize = 0;
     this.rightPupilSize = 0;
@@ -553,6 +658,10 @@ export class PupilConcentrationTrackerComponent implements OnInit, OnDestroy {
    * eyes, or if the concentration level has become desensitized over time.
    * Has no effect if the tracker is not currently active.
    */
+  /**
+   * Restarts calibration by clearing the baseline and relevant history.
+   * Shows a snackbar prompting the user to look at the camera.
+   */
   recalibrate() {
     if (!this.isTracking) return;
     console.log('Recalibrating...');
@@ -560,6 +669,9 @@ export class PupilConcentrationTrackerComponent implements OnInit, OnDestroy {
     this.showMessage('Recalibrating... Please look at the camera.', 'info');
   }
 
+  /**
+   * Clears calibration state and measurement history.
+   */
   private resetCalibration() {
     this.isCalibrated = false;
     this.metrics.isCalibrated = false;
@@ -574,6 +686,10 @@ export class PupilConcentrationTrackerComponent implements OnInit, OnDestroy {
    * Stops the eye tracker and resets all metrics and state.
    * Called automatically when the user stops the tracker, or
    * when the component is destroyed.
+   */
+  /**
+   * Stops the detection loop, releases the camera, clears drawing surfaces,
+   * and resets key state. Shows a snackbar message.
    */
   stopTracking() {
     // Cancel animation frame
@@ -606,6 +722,12 @@ export class PupilConcentrationTrackerComponent implements OnInit, OnDestroy {
     this.showMessage('Tracking stopped', 'info');
   }
 
+  /**
+   * Displays a snackbar message with styled panel class based on type.
+   *
+   * @param message Message text to display.
+   * @param type Snackbar style category.
+   */
   private showMessage(message: string, type: 'success' | 'error' | 'info' = 'info') {
     this.snackBar.open(message, 'Close', {
       duration: 3000,
@@ -616,24 +738,42 @@ export class PupilConcentrationTrackerComponent implements OnInit, OnDestroy {
   }
 
   // Public methods for configuration
+  /**
+   * Updates sensitivity in the config and mirrors it into legacy settings.
+   * @param sensitivity New sensitivity value (clamped in caller usage).
+   */
   updateSensitivity(sensitivity: number) {
     this.config.sensitivity = Math.max(0.1, Math.min(5.0, sensitivity));
     this.settings.sensitivity = Math.round(sensitivity);
   }
 
+  /**
+   * Updates smoothing factor in the config based on an integer slider value.
+   * @param smoothing Slider value 1-9.
+   */
   updateSmoothing(smoothing: number) {
     this.config.smoothingFactor = Math.max(0.1, Math.min(0.9, smoothing / 10));
     this.settings.smoothing = Math.round(smoothing);
   }
 
+  /**
+   * Updates the target processing frame rate, clamped to [15, 60] FPS.
+   * @param frameRate Desired frames per second.
+   */
   updateFrameRate(frameRate: number) {
     this.config.frameRate = Math.max(15, Math.min(60, frameRate));
   }
 
+  /**
+   * Returns a shallow copy of the current tracker configuration.
+   */
   getConfig() {
     return { ...this.config };
   }
 
+  /**
+   * Returns a shallow copy of the current public metrics.
+   */
   getMetrics() {
     return { ...this.metrics };
   }
