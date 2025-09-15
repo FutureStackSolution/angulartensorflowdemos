@@ -138,6 +138,41 @@ mat-card-actions {
   border-top: 1px solid #eee;
 }
 
+/* Button/icon alignment to match other components */
+mat-card-actions button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-width: 140px;
+  line-height: 1;
+}
+
+mat-card-actions button mat-icon {
+  margin: 0;
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+  line-height: 1;
+  vertical-align: middle;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transform: translateY(-1px);
+}
+
+mat-card-actions button mat-spinner {
+  margin: 0;
+  vertical-align: middle;
+}
+
+mat-card-actions button span {
+  line-height: 1;
+  vertical-align: middle;
+  display: inline-flex;
+  align-items: center;
+}
+
 /* Status and stats styling copied from object-detection for parity */
 .detection-status {
   margin: 20px 0;
