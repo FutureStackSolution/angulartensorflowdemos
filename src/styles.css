@@ -11,3 +11,60 @@ body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
 .container {
   padding: 20px;
 }
+
+/* Global Angular Material button alignment: center icon + text horizontally and vertically */
+.mat-mdc-raised-button, .mat-mdc-stroked-button, .mat-mdc-unelevated-button, .mat-mdc-outlined-button, .mat-mdc-button {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.5ch; /* exactly one character space between icon and text */
+}
+
+.mat-mdc-button .mat-icon, 
+.mat-mdc-raised-button .mat-icon, 
+.mat-mdc-stroked-button .mat-icon, 
+.mat-mdc-unelevated-button .mat-icon, 
+.mat-mdc-outlined-button .mat-icon {
+  margin: 0 !important;
+  font-size: 18px !important;
+  width: 18px !important;
+  height: 18px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  vertical-align: middle !important;
+}
+
+/* Ensure the internal MDC label lays out icon + text with spacing */
+.mat-mdc-button .mdc-button__label,
+.mat-mdc-raised-button .mdc-button__label,
+.mat-mdc-stroked-button .mdc-button__label,
+.mat-mdc-unelevated-button .mdc-button__label,
+.mat-mdc-outlined-button .mdc-button__label {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.5ch !important; /* one space */
+}
+
+/* Fallback: add right-margin on icon if gap not honored by browser */
+.mdc-button__label mat-icon {
+  margin-right: 0.5ch !important;
+}
+
+.mat-mdc-button .mat-spinner, 
+.mat-mdc-raised-button .mat-spinner, 
+.mat-mdc-stroked-button .mat-spinner, 
+.mat-mdc-unelevated-button .mat-spinner, 
+.mat-mdc-outlined-button .mat-spinner {
+  margin: 0 !important;
+}
+
+.mat-mdc-button span, 
+.mat-mdc-raised-button span, 
+.mat-mdc-stroked-button span, 
+.mat-mdc-unelevated-button span, 
+.mat-mdc-outlined-button span {
+  display: inline-flex !important;
+  align-items: center !important;
+  line-height: 1 !important;
+}
